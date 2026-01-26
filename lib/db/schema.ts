@@ -1,5 +1,4 @@
-import * as authSchema from "@/lib/db/auth-schema";
-export { authSchema };
+export * from "@/lib/db/auth-schema";
 
 
 
