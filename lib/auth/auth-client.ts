@@ -1,9 +1,12 @@
-import { apiKeyClient, organizationClient, adminClient } from "better-auth/client/plugins"
-import { createAuthClient } from "better-auth/react"
-export const authClient = createAuthClient({
+import { apiKeyClient, organizationClient, adminClient } from "better-auth/client/plugins";
+import { creemClient } from "@creem_io/better-auth/client";
+import { createCreemAuthClient } from "@creem_io/better-auth/create-creem-auth-client";
+
+export const authClient = createCreemAuthClient({
     plugins: [
         apiKeyClient(),
         organizationClient(),
-        adminClient()
+        adminClient(),
+        creemClient()
     ]
 })
