@@ -15,7 +15,7 @@ export const auth = betterAuth({
 
     emailAndPassword: {
         enabled: true,
-        
+
         async sendResetPassword(data, request) {
             // Send an email to the user with a link to reset their password
         },
@@ -40,3 +40,6 @@ export const auth = betterAuth({
         }),
     ]
 });
+
+export type Session = typeof auth.$Infer.Session;
+export type Organization = typeof auth.$Infer.Organization;
