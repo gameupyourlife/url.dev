@@ -1,10 +1,11 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "@/lib/db"; // your drizzle instance
-import { admin, apiKey, organization } from "better-auth/plugins";
+import { admin as adminPlugin, apiKey, organization } from "better-auth/plugins";
 import { creem } from "@creem_io/better-auth";
 import { nextCookies } from "better-auth/next-js";
 import * as schema from "@/lib/db/schema"; // your drizzle schema
+import { ac, admin as adminRole, developer, member, owner } from "./permissions";
 
 export const auth = betterAuth({
     appName: "url.dev",
@@ -29,8 +30,16 @@ export const auth = betterAuth({
 
     plugins: [
         apiKey(),
-        organization(),
-        admin(),
+        organization({
+            ac: ac,
+            roles: {
+                owner,
+                admin: adminRole,
+                developer,
+                member,
+            }
+        }),
+        adminPlugin(),
         nextCookies(),
         creem({
             apiKey: process.env.CREEM_API_KEY!,

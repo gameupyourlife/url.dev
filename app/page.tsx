@@ -1,5 +1,4 @@
-"use client";
-
+"use client";;
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -354,7 +353,7 @@ data = response.json()`,
               </Button>
             </div>
           </div>
-          
+
           <div className="grid md:grid-cols-2">
             <div className="bg-black/95 p-6 border-r border-border/20">
               <div className="text-xs text-muted-foreground mb-3 font-semibold uppercase tracking-wider">Request</div>
@@ -364,7 +363,7 @@ data = response.json()`,
                 </code>
               </pre>
             </div>
-            
+
             <div className="bg-black/95 p-6">
               <div className="text-xs text-muted-foreground mb-3 font-semibold uppercase tracking-wider">Response</div>
               <pre className="overflow-x-auto text-sm">

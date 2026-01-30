@@ -9,6 +9,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { user, organization } from "./auth-schema";
+export * from "./auth-schema";
 
 // Short URLs table
 export const shortUrl = pgTable(
@@ -40,6 +41,8 @@ export const shortUrl = pgTable(
         utmSource: text("utm_source"),
         utmMedium: text("utm_medium"),
         utmCampaign: text("utm_campaign"),
+        utmTerm: text("utm_term"),
+        utmContent: text("utm_content"),
 
         // Custom metadata as JSON string
         metadata: text("metadata"),
@@ -117,6 +120,8 @@ export const click = pgTable(
         utmSource: text("utm_source"),
         utmMedium: text("utm_medium"),
         utmCampaign: text("utm_campaign"),
+        utmTerm: text("utm_term"),
+        utmContent: text("utm_content"),
 
         // Timestamp
         clickedAt: timestamp("clicked_at").defaultNow().notNull(),
