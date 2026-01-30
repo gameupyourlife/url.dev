@@ -258,7 +258,7 @@ export function UrlCreationCard() {
                         form.handleSubmit();
                     }}
                 >
-                    <FieldGroup className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FieldGroup className="grid grid-cols-1 md:grid-cols-2 gap-6 h-fit">
                         {/* Destination URL */}
                         <form.Field
                             name="originalUrl"

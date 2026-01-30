@@ -1,16 +1,16 @@
-import { getShortUrlById } from "@/app/actions/short-urls";
 import { isAuthenticated } from "@/lib/auth/guards";
+import UrlHeader from "@/components/dashboard/url/UrlHeader";
+import UrlTraffic from "@/components/dashboard/url/UrlTraffic";
+import TopCountries from "@/components/dashboard/url/TopCountries";
+import Referrers from "@/components/dashboard/url/Referrers";
+import Devices from "@/components/dashboard/url/Devices";
+import Browsers from "@/components/dashboard/url/Browsers";
+import ClicksTable from "@/components/dashboard/url/ClicksTable";
 
-export default async function UrlDetailPage({
-    params,
-}: {
-    params: Promise<{ id: string }>
-}) {
+export default async function UrlDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const session = await isAuthenticated({ behavior: "redirect" });
 
     const urlId = (await params).id;
-
-    console.log("Fetching details for URL ID:", urlId);
 
     if (!urlId || Array.isArray(urlId)) {
         return (
@@ -21,41 +21,43 @@ export default async function UrlDetailPage({
         );
     }
 
-    const url = await getShortUrlById(urlId);
-
     return (
         <div className="container mx-auto p-4">
-            <h1 className="text-2xl font-bold mb-4">Dashboard</h1>
-            <p>Welcome to your dashboard!</p>
+            <div className="mb-4 flex items-center justify-between">
+                <div>
+                    <h1 className="text-2xl font-bold">URL Analytics</h1>
+                    <p className="text-sm text-muted-foreground">Detailed analytics for this short URL</p>
+                </div>
+                <div>
+                    <a className="text-sm text-indigo-600" href="/dashboard/urls">Back to URLs</a>
+                </div>
+            </div>
 
-            <div>
-                <h2 className="text-xl font-semibold mb-2">URL Details</h2>
-                <p><strong>Slug:</strong> {url?.slug}</p>
-                <p><strong>Original URL:</strong> {url?.originalUrl}</p>
-                <p><strong>Total Clicks:</strong> {url?.clicks?.length}</p>
+            {/* Header */}
+            <UrlHeader urlId={urlId} />
 
-                { url?.clicks && url.clicks.length > 0 ? (
-                    <div className="mt-4">
-                        <h3 className="text-lg font-semibold mb-2">Click Analytics</h3>
-                        <ul>
-                            {url.clicks.map((click) => (
-                                <li key={click.id} className="mb-1">
-                                    <p><strong>Timestamp:</strong> {new Date(click.clickedAt).toLocaleString()}</p>
-                                    <p><strong>IP Address:</strong> {click.ipAddress || 'N/A'}</p>
-                                    <p><strong>User Agent:</strong> {click.userAgent || 'N/A'}</p>
-                                    <p><strong>Country:</strong> {click.countryName || 'N/A'}</p>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div className="lg:col-span-2">
+                    {/* Traffic */}
+                    <UrlTraffic urlId={urlId} days={90} />
 
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                ) : (
-                    <p className="mt-4">No clicks recorded for this URL yet.</p>
-                )
+                    {/* Recent clicks (client) */}
+                    <ClicksTable urlId={urlId} />
+                </div>
 
+                <div className="lg:col-span-1 space-y-4">
+                    {/* Top countries */}
+                    <TopCountries urlId={urlId} />
 
-                }
+                    {/* Referrers */}
+                    <Referrers urlId={urlId} />
 
+                    {/* Devices */}
+                    <Devices urlId={urlId} />
+
+                    {/* Browsers */}
+                    <Browsers urlId={urlId} />
+                </div>
             </div>
         </div>
     );
