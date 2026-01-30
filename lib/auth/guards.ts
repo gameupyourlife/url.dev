@@ -154,7 +154,7 @@ async function authenticateWithSession(
     const session = await auth.api.getSession({
         headers: requestHeaders,
     });
-
+    
     // Check if session exists
     if (!session) {
         if (behavior === "error") {
@@ -164,7 +164,7 @@ async function authenticateWithSession(
     }
 
     // Check permissions if required
-    if (permissions) {
+    if (permissions && session.session.activeOrganizationId) {
         const hasRequiredPermissions = await verifyPermissions(requestHeaders, permissions);
 
         if (!hasRequiredPermissions) {

@@ -8,6 +8,8 @@ import {
     parseReferer,
     getDeviceCategory,
 } from "@/lib/analytics";
+import { resolveRedirectForCountry } from "@/lib/redirects";
+import { ShortUrl } from "@/lib/db/types";
 
 export async function GET(
     req: NextRequest,
@@ -53,95 +55,19 @@ export async function GET(
         }
 
         // Extract comprehensive analytics data with country lookup
-        const analytics = await extractAnalyticsDataWithCountry(req, slug);
-        const refererInfo = parseReferer(analytics.referer);
-        const urlObj = new URL(req.url);
+        const analytics = await recordUrlAnalytics(req, slug, url);
 
-        // Extract UTM parameters from URL
-        const utmSource = urlObj.searchParams.get("utm_source");
-        const utmMedium = urlObj.searchParams.get("utm_medium");
-        const utmCampaign = urlObj.searchParams.get("utm_campaign");
+        // Resolve country-specific redirect target (if configured in metadata)
+        const { target: resolvedTarget, matchedRule } = resolveRedirectForCountry(url.originalUrl, url.metadata, analytics.country?.code || analytics.cfCountry || undefined);
 
-        // Record analytics and increment click count atomically using a transaction
-        await db.transaction(async (tx) => {
-            // Insert comprehensive analytics record
-            await tx.insert(click).values({
-                id: nanoid(),
-                shortUrlId: url.id,
-                shortCode: slug,
+        // If a relative path was configured, resolve it against the original URL
+        const redirectTarget = resolvedTarget.startsWith("/") ? new URL(resolvedTarget, url.originalUrl).toString() : resolvedTarget;
 
-                // Request info
-                ipAddress: analytics.ip !== "unknown" ? analytics.ip : null,
-                userAgent: analytics.userAgent !== "unknown" ? analytics.userAgent : null,
-                referer: analytics.referer !== "direct" ? analytics.referer : null,
-                host: analytics.host !== "unknown" ? analytics.host : null,
+        if (matchedRule) {
+            console.log(`Country redirect applied for slug=${slug} country=${analytics.country?.code || analytics.cfCountry} => target=${redirectTarget}`);
+        }
 
-                // Device info
-                deviceType: analytics.device.type !== "unknown" ? analytics.device.type : null,
-                deviceVendor: analytics.device.vendor !== "unknown" ? analytics.device.vendor : null,
-                deviceModel: analytics.device.model !== "unknown" ? analytics.device.model : null,
-
-                // Browser info
-                browserName: analytics.browser.name !== "unknown" ? analytics.browser.name : null,
-                browserVersion: analytics.browser.version !== "unknown" ? analytics.browser.version : null,
-
-                // OS info
-                osName: analytics.os.name !== "unknown" ? analytics.os.name : null,
-                osVersion: analytics.os.version !== "unknown" ? analytics.os.version : null,
-
-                // Engine info
-                engineName: analytics.engine.name !== "unknown" ? analytics.engine.name : null,
-                engineVersion: analytics.engine.version !== "unknown" ? analytics.engine.version : null,
-
-                // CPU info
-                cpuArchitecture: analytics.cpu.architecture !== "unknown" ? analytics.cpu.architecture : null,
-
-                // Location info
-                countryCode: analytics.country?.code || null,
-                countryName: analytics.country?.name || null,
-                cfCountry: analytics.cfCountry !== "unknown" ? analytics.cfCountry : null,
-                cfRay: analytics.cfRay !== "unknown" ? analytics.cfRay : null,
-
-                // Additional headers
-                acceptLanguage: analytics.acceptLanguage !== "unknown" ? analytics.acceptLanguage : null,
-                acceptEncoding: analytics.acceptEncoding !== "unknown" ? analytics.acceptEncoding : null,
-                dnt: analytics.dnt !== "not-set" ? analytics.dnt : null,
-
-                // Analytics flags
-                isBot: analytics.isBot,
-
-                // URL search parameters
-                searchParams: Object.keys(analytics.searchParams).length > 0
-                    ? JSON.stringify(analytics.searchParams)
-                    : null,
-
-                // Referer analysis
-                refererDomain: refererInfo.domain !== "direct" && refererInfo.domain !== "unknown"
-                    ? refererInfo.domain
-                    : null,
-                refererType: refererInfo.type !== "unknown" ? refererInfo.type : null,
-                refererSource: refererInfo.source !== "direct" && refererInfo.source !== "unknown"
-                    ? refererInfo.source
-                    : null,
-
-                // UTM parameters
-                utmSource: utmSource || null,
-                utmMedium: utmMedium || null,
-                utmCampaign: utmCampaign || null,
-            });
-
-            // Increment click count and update last clicked timestamp
-            await tx
-                .update(shortUrl)
-                .set({
-                    clickCount: url.clickCount + 1,
-                    lastClickedAt: new Date(),
-                })
-                .where(eq(shortUrl.id, url.id));
-        });
-
-        // Redirect to original URL
-        return NextResponse.redirect(url.originalUrl, 307);
+        return NextResponse.redirect(redirectTarget, 307);
     } catch (error) {
         console.error("Error redirecting URL:", error);
         return NextResponse.json(
@@ -150,3 +76,94 @@ export async function GET(
         );
     }
 }
+
+async function recordUrlAnalytics(req: NextRequest, slug: string, url: ShortUrl) {
+    const analytics = await extractAnalyticsDataWithCountry(req, slug);
+    const refererInfo = parseReferer(analytics.referer);
+    const urlObj = new URL(req.url);
+
+    // Extract UTM parameters from URL
+    const utmSource = urlObj.searchParams.get("utm_source");
+    const utmMedium = urlObj.searchParams.get("utm_medium");
+    const utmCampaign = urlObj.searchParams.get("utm_campaign");
+
+    // Record analytics and increment click count atomically using a transaction
+    db.transaction(async (tx) => {
+        // Insert comprehensive analytics record
+        await tx.insert(click).values({
+            id: nanoid(),
+            shortUrlId: url.id,
+            shortCode: slug,
+
+            // Request info
+            ipAddress: analytics.ip !== "unknown" ? analytics.ip : null,
+            userAgent: analytics.userAgent !== "unknown" ? analytics.userAgent : null,
+            referer: analytics.referer !== "direct" ? analytics.referer : null,
+            host: analytics.host !== "unknown" ? analytics.host : null,
+
+            // Device info
+            deviceType: analytics.device.type !== "unknown" ? analytics.device.type : null,
+            deviceVendor: analytics.device.vendor !== "unknown" ? analytics.device.vendor : null,
+            deviceModel: analytics.device.model !== "unknown" ? analytics.device.model : null,
+
+            // Browser info
+            browserName: analytics.browser.name !== "unknown" ? analytics.browser.name : null,
+            browserVersion: analytics.browser.version !== "unknown" ? analytics.browser.version : null,
+
+            // OS info
+            osName: analytics.os.name !== "unknown" ? analytics.os.name : null,
+            osVersion: analytics.os.version !== "unknown" ? analytics.os.version : null,
+
+            // Engine info
+            engineName: analytics.engine.name !== "unknown" ? analytics.engine.name : null,
+            engineVersion: analytics.engine.version !== "unknown" ? analytics.engine.version : null,
+
+            // CPU info
+            cpuArchitecture: analytics.cpu.architecture !== "unknown" ? analytics.cpu.architecture : null,
+
+            // Location info
+            countryCode: analytics.country?.code || null,
+            countryName: analytics.country?.name || null,
+            cfCountry: analytics.cfCountry !== "unknown" ? analytics.cfCountry : null,
+            cfRay: analytics.cfRay !== "unknown" ? analytics.cfRay : null,
+
+            // Additional headers
+            acceptLanguage: analytics.acceptLanguage !== "unknown" ? analytics.acceptLanguage : null,
+            acceptEncoding: analytics.acceptEncoding !== "unknown" ? analytics.acceptEncoding : null,
+            dnt: analytics.dnt !== "not-set" ? analytics.dnt : null,
+
+            // Analytics flags
+            isBot: analytics.isBot,
+
+            // URL search parameters
+            searchParams: Object.keys(analytics.searchParams).length > 0
+                ? JSON.stringify(analytics.searchParams)
+                : null,
+
+            // Referer analysis
+            refererDomain: refererInfo.domain !== "direct" && refererInfo.domain !== "unknown"
+                ? refererInfo.domain
+                : null,
+            refererType: refererInfo.type !== "unknown" ? refererInfo.type : null,
+            refererSource: refererInfo.source !== "direct" && refererInfo.source !== "unknown"
+                ? refererInfo.source
+                : null,
+
+            // UTM parameters
+            utmSource: utmSource || null,
+            utmMedium: utmMedium || null,
+            utmCampaign: utmCampaign || null,
+        });
+
+        // Increment click count and update last clicked timestamp
+        await tx
+            .update(shortUrl)
+            .set({
+                clickCount: url.clickCount + 1,
+                lastClickedAt: new Date(),
+            })
+            .where(eq(shortUrl.id, url.id));
+    });
+    return analytics;
+}
+

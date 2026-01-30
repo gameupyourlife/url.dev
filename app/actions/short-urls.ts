@@ -8,6 +8,7 @@ import { nanoid } from "nanoid";
 
 export async function getShortUrls(): Promise<ShortUrl[]> {
     const session = await isAuthenticated({ behavior: "error", permissions: { shortUrl: ["read"] } });
+
     const results = await db.select().from(shortUrl).where(
         session.session.activeOrganizationId ?
             eq(shortUrl.organizationId, session.session.activeOrganizationId)
@@ -38,8 +39,13 @@ export async function getShortUrlById(id: string): Promise<UrlWithClicks | null>
 
     const clicksResult = await db.select().from(click).where(eq(click.shortUrlId, url.id));
 
+    const urlWithClicks: UrlWithClicks = {
+        ...url,
+        clicks: clicksResult,
+    };
 
-    return url || null;
+
+    return urlWithClicks || null;
 }
 
 export async function upsertShortUrl(url: (Omit<NewShortUrl, "id"> | ShortUrl)) {

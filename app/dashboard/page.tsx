@@ -16,14 +16,6 @@ export default async function DashboardPage() {
             <p>Welcome to your dashboard!</p>
 
             <UrlCreationCard />
-
-            <Card className="h-[700px] p-0 overflow-hidden">
-                <Map center={[4.351944, 50.845833]} zoom={1} maxZoom={1} minZoom={1} >
-                    {/* <MapControls /> */}
-                </Map>
-            </Card>
-
-            <FormTanstackComplex />
         </div>
     );
 }
