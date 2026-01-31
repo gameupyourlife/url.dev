@@ -9,7 +9,7 @@ export default async function Devices({ urlId }: { urlId?: string }) {
             <h3 className="text-lg font-medium mb-2">Device Types</h3>
             <ul>
                 {rows.map((r, i) => (
-                    <li key={i} className="flex justify-between py-1 border-b"> 
+                    <li key={i} className="flex justify-between py-1"> 
                         <span>{r.device}</span>
                         <span className="font-semibold">{r.clicks}</span>
                     </li>

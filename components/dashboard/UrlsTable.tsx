@@ -127,7 +127,7 @@ export default function UrlsTable({ initialUrls }: { initialUrls: ShortUrl[] }) 
                 <div className="ml-auto text-sm text-muted-foreground">{loading ? 'Loading...' : `Showing ${Math.min((page - 1) * pageSize + 1, total)}-${Math.min(page * pageSize, total)} of ${total}`}</div>
             </div>
 
-            <div className="overflow-x-auto border rounded">
+            <div className="overflow-x-auto rounded">
                 <Table className="w-full text-left">
                     <TableHeader>
                         {table.getHeaderGroups().map((headerGroup: any) => (
@@ -143,7 +143,7 @@ export default function UrlsTable({ initialUrls }: { initialUrls: ShortUrl[] }) 
                             <TableRow><TableCell colSpan={6} className="p-4">No URLs found</TableCell></TableRow>
                         ) : (
                             table.getRowModel().rows.map((row: any) => (
-                                <TableRow key={row.id} className="border-t">
+                                <TableRow key={row.id}>
                                     {row.getVisibleCells().map((cell: any) => (
                                         <TableCell key={cell.id} className="p-2">{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
                                     ))}

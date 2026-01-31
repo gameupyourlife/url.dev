@@ -22,7 +22,7 @@ export default async function TopCountries({ urlId }: { urlId?: string }) {
             <div className="grid grid-cols-1 gap-3">
                 <ul>
                     {rows.slice(0, 8).map((r, i) => (
-                        <li key={i} className="flex justify-between py-1 border-b">
+                        <li key={i} className="flex justify-between py-1">
                             <span>{r.country}</span>
                             <span className="font-semibold">{r.clicks}</span>
                         </li>

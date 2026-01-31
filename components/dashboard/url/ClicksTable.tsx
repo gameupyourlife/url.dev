@@ -52,7 +52,7 @@ export default function ClicksTable({ urlId }: { urlId: string }) {
                     </select>
                 </div>
             </div>
-            <div className="overflow-x-auto border rounded">
+            <div className="overflow-x-auto rounded">
                 <table className="w-full text-left">
                     <thead>
                         <tr>
@@ -71,7 +71,7 @@ export default function ClicksTable({ urlId }: { urlId: string }) {
                             <tr><td colSpan={6} className="p-4">No clicks</td></tr>
                         ) : (
                             data.map((c: any) => (
-                                <tr key={c.id} className="border-t">
+                                <tr key={c.id}>
                                     <td className="p-2">{new Date(c.clickedAt).toLocaleString()}</td>
                                     <td className="p-2">{c.ipAddress || '—'}</td>
                                     <td className="p-2">{c.countryName || '—'}</td>

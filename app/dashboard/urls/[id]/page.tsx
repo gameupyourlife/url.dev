@@ -8,56 +8,72 @@ import Browsers from "@/components/dashboard/url/Browsers";
 import ClicksTable from "@/components/dashboard/url/ClicksTable";
 import MapCountryHeatmap from "@/components/ui/MapCountryHeatmap";
 
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { BarChart3Icon, ArrowLeftIcon } from "lucide-react";
+
 export default async function UrlDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const session = await isAuthenticated({ behavior: "redirect" });
-
     const urlId = (await params).id;
 
     if (!urlId || Array.isArray(urlId)) {
         return (
             <div className="container mx-auto p-4">
-                <h1 className="text-2xl font-bold mb-4">Invalid URL</h1>
-                <p>The provided URL ID is invalid.</p>
+                <Card className="p-6 flex flex-col items-center justify-center gap-2">
+                    <h1 className="text-2xl font-bold mb-2">Invalid URL</h1>
+                    <p className="text-muted-foreground">The provided URL ID is invalid.</p>
+                    <Button asChild variant="outline" className="mt-2"><a href="/dashboard/urls"><ArrowLeftIcon className="mr-2" />Back to URLs</a></Button>
+                </Card>
             </div>
         );
     }
 
     return (
-        <div className="container mx-auto p-4">
-            <div className="mb-4 flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold">URL Analytics</h1>
-                    <p className="text-sm text-muted-foreground">Detailed analytics for this short URL</p>
+        <div className="container mx-auto p-4 flex flex-col gap-6">
+            <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-2">
+                <div className="flex items-center gap-2">
+                    <BarChart3Icon className="w-7 h-7 text-primary" />
+                    <h1 className="text-3xl font-bold tracking-tight mb-1">URL Analytics</h1>
                 </div>
-                <div>
-                    <a className="text-sm text-indigo-600" href="/dashboard/urls">Back to URLs</a>
+                <Button asChild size="lg" variant="default" className="mt-2 md:mt-0">
+                    <a href="/dashboard/urls"><ArrowLeftIcon className="mr-2" />Back to URLs</a>
+                </Button>
+            </header>
+
+            <Card className="p-0 mb-2">
+                {/* Header */}
+                <UrlHeader urlId={urlId} />
+            </Card>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2 flex flex-col gap-6">
+                    <Card className="p-0">
+                        {/* Traffic */}
+                        <UrlTraffic urlId={urlId} days={90} />
+                    </Card>
+                    <Card className="p-0">
+                        {/* Recent clicks (client) */}
+                        <ClicksTable urlId={urlId} />
+                    </Card>
                 </div>
-            </div>
-
-            {/* Header */}
-            <UrlHeader urlId={urlId} />
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <div className="lg:col-span-2">
-                    {/* Traffic */}
-                    <UrlTraffic urlId={urlId} days={90} />
-
-                    {/* Recent clicks (client) */}
-                    <ClicksTable urlId={urlId} />
-                </div>
-
-                <div className="lg:col-span-1 space-y-4">
-                    {/* Top countries */}
-                    <TopCountries urlId={urlId} />
-
-                    {/* Referrers */}
-                    <Referrers urlId={urlId} />
-
-                    {/* Devices */}
-                    <Devices urlId={urlId} />
-
-                    {/* Browsers */}
-                    <Browsers urlId={urlId} />
+                <div className="lg:col-span-1 flex flex-col gap-6">
+                    <Card className="p-0">
+                        {/* Top countries */}
+                        <TopCountries urlId={urlId} />
+                    </Card>
+                    <Card className="p-0">
+                        {/* Referrers */}
+                        <Referrers urlId={urlId} />
+                    </Card>
+                    <Card className="p-0">
+                        {/* Devices */}
+                        <Devices urlId={urlId} />
+                    </Card>
+                    <Card className="p-0">
+                        {/* Browsers */}
+                        <Browsers urlId={urlId} />
+                    </Card>
                 </div>
             </div>
         </div>
