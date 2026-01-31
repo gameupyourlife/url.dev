@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LinkIcon, ListIcon } from "lucide-react";
 import Link from "next/link";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { UserNav } from "@/components/dashboard/UserNav";
 
 export default async function DashboardUrlsPage() {
@@ -31,8 +31,10 @@ export default async function DashboardUrlsPage() {
 
 
             <div className="grid grid-cols-1 gap-6">
-                <Card className="p-0">
-                    <UrlsTable initialUrls={urls} />
+                <Card >
+                    <CardContent>
+                        <UrlsTable initialUrls={urls} />
+                    </CardContent>
                 </Card>
             </div>
         </div>

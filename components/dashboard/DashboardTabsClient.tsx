@@ -38,10 +38,11 @@ export function DashboardTabsClient() {
             </Button>
             <Button
                 size="lg"
+                variant="secondary"
                 className={
                     pathname === "/dashboard/create"
                         ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-muted-foreground hover:bg-accent"
+                        : ""
                 }
                 asChild
             >

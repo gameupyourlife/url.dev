@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { useTheme } from "next-themes";
 
 export function UserNav({
     user,
@@ -21,6 +22,8 @@ export function UserNav({
     isNavigatedTo?: boolean;
 }) {
     const [open, setOpen] = useState(false);
+    const theme = useTheme();
+
     return (
         <DropdownMenu
             open={open}
@@ -69,7 +72,18 @@ export function UserNav({
                     <Link href="/dashboard/settings">Settings</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                    <Link href="/profile">Profile</Link>
+                    <button
+                        className="w-full"
+                        onClick={() =>
+                            theme.setTheme(
+                                theme.resolvedTheme === "dark"
+                                    ? "light"
+                                    : "dark",
+                            )
+                        }
+                    >
+                        {theme.theme === "dark" ? "Light Mode" : "Dark Mode"}
+                    </button>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>

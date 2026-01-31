@@ -83,10 +83,35 @@ export default function MapCountryHeatmap({
     let mounted = true;
     let clickHandler: any;
 
+    // Remove all existing layers and sources to hide the base map (country names, cities, etc.)
+    // This will leave only our custom heatmap layers visible
+    try {
+      const layers = map.getStyle().layers;
+      if (layers) {
+        // Remove all layers in reverse order (top to bottom)
+        for (let i = layers.length - 1; i >= 0; i--) {
+          const layer = layers[i];
+          try {
+            map.removeLayer(layer.id);
+          } catch { }
+        }
+      }
+      // Remove all sources except our custom one (which will be added below)
+      const sources = map.getStyle().sources;
+      for (const sourceId in sources) {
+        try {
+          map.removeSource(sourceId);
+        } catch { }
+      }
+    } catch { }
+
     (async () => {
       try {
         const geojson = await fetchCountriesGeoJson();
         if (!mounted) return;
+
+        // ...existing code...
+        // (All the original logic for building the heatmap remains unchanged)
 
         // Build counts map and compute total clicks
         const normalizeKey = (s: unknown) =>
@@ -117,33 +142,22 @@ export default function MapCountryHeatmap({
 
         // Debug helper: print some samples in dev so we can see why matching fails
         if (typeof window !== "undefined" && (window as any).__MAP_HEAT_DEBUG__ === undefined) {
-          // One-time flag to avoid spamming the console
           (window as any).__MAP_HEAT_DEBUG__ = true;
-          // eslint-disable-next-line no-console
           console.groupCollapsed("MapCountryHeatmap — debug info");
-          // eslint-disable-next-line no-console
           console.log("counts keys (first 50):", Array.from(counts.keys()).slice(0, 50));
-          // eslint-disable-next-line no-console
           console.log("counts entries:", Array.from(counts.entries()).slice(0, 50));
-          // eslint-disable-next-line no-console
           console.log("countsCode entries:", Array.from(countsCode.entries()));
-          // eslint-disable-next-line no-console
           console.log("countsName entries:", Array.from(countsName.entries()));
-          // show sample feature properties
           const sampleProps = (geojson.features || []).slice(0, 5).map((f: any) => {
             const keys = Object.keys(f.properties || {}).slice(0, 10);
             return { keys, sample: f.properties ? Object.fromEntries(keys.map((k) => [k, f.properties[k]])) : {} };
           });
-          // eslint-disable-next-line no-console
           console.log("sample feature props (first 5):", sampleProps);
-
-          // Try to find features matching common target codes/names
           const targets = ["US", "CN", "IN", "GB", "FR", "DE", "BR", "AU", "UNITED STATES"];
           const found: any = {};
           for (const t of targets) {
             for (const f of (geojson.features || []) as any[]) {
               const props = f.properties || {};
-              // check direct equality of normalized values
               for (const k of Object.keys(props)) {
                 const val = props[k];
                 if (!val) continue;
@@ -155,15 +169,12 @@ export default function MapCountryHeatmap({
               if (found[t]) break;
             }
           }
-          // eslint-disable-next-line no-console
           console.log("matches for common targets:", found);
-          // eslint-disable-next-line no-console
           console.groupEnd();
         }
 
         // helper to find count for a feature's props with safer matching rules
         const matchCountForProps = (props: any) => {
-          // prefer code-based matches against known ISO fields
           const codeFields = [
             "ISO3166-1-Alpha-2",
             "ISO3166-1-Alpha-3",
@@ -174,61 +185,43 @@ export default function MapCountryHeatmap({
             "ADM0_A3",
             "ADM0_A3_IS",
           ];
-
           for (const f of codeFields) {
             const v = props[f];
             if (!v) continue;
             const vn = normalizeKey(v);
-            // exact match
             if (countsCode.has(vn)) return countsCode.get(vn)!;
-            // if 3-letter provided and 2-letter exists in counts, try matching first 2 chars (e.g., USA -> US)
             if (vn.length === 3 && countsCode.has(vn.slice(0, 2))) return countsCode.get(vn.slice(0, 2))!;
-            // if 2-letter and counts has 3-letter starting with it (rare), check that too
             if (vn.length === 2) {
               for (const k of countsCode.keys()) {
                 if (k.length === 3 && k.startsWith(vn)) return countsCode.get(k)!;
               }
             }
           }
-
-          // name-like matches (only for name fields and non-code counts)
           const nameFields = ["ADMIN", "NAME", "NAME_LONG", "ADMIN_ENG", "SOVEREIGN", "name"];
           const candNames = nameFields.map((f) => props[f]).filter(Boolean).map((s: any) => normalizeKey(s));
-
-          // exact name match
           for (const cn of candNames) {
             if (countsName.has(cn)) return countsName.get(cn)!;
           }
-
-          // fuzzy name match but require both strings length >= 4 to avoid short-code collisions
           for (const [k, v] of countsName.entries()) {
             if (k.length < 4) continue;
             if (candNames.some((cn) => cn.length >= 4 && (cn.includes(k) || k.includes(cn) || cn.startsWith(k) || k.startsWith(cn)))) {
               return v;
             }
           }
-
           return 0;
         };
 
         const features = (geojson.features || []).map((f) => {
           const props: any = f.properties ?? {};
-
           const c = matchCountForProps(props);
-
-          // Debug: if this is a major country and c === 0, log for inspection
           if (typeof window !== "undefined" && (c === 0 && (/UNITED|UNITEDSTATES|CHINA|INDIA|BRAZIL/i.test(String(props.ADMIN || props.NAME || ""))))) {
-            // eslint-disable-next-line no-console
             console.warn("MapCountryHeatmap — no match for feature:", {
               admin: props.ADMIN || props.NAME || props.ADMIN_ENG,
               propsKeys: Object.keys(props),
             });
           }
-
-          // Provide both count and normalized value (0..1) relative to the top country, and ratio relative to total
           const norm = maxCount > 0 ? c / maxCount : 0;
           const ratio = total > 0 ? c / total : 0;
-
           return {
             ...f,
             properties: {
@@ -290,7 +283,6 @@ export default function MapCountryHeatmap({
             type: "fill",
             source: sourceId,
             paint: {
-              // cast expression to any to satisfy types; MapLibre accepts expression arrays at runtime
               "fill-color": (interpExpr as any),
               "fill-opacity": total === 0 ? 0.15 : 0.8,
             },
@@ -318,37 +310,25 @@ export default function MapCountryHeatmap({
           if (!feature) return;
           const props = feature.properties || {};
           const lngLat = e.lngLat;
-
-          // Remove old popup
           try {
             popupRef.current?.remove();
           } catch { }
-
-          // Derive display name (include lowercase `name` property used by geo-countries)
           const displayName = props.ADMIN || props.NAME || props.name || props.ADMIN_ENG || props.SOVEREIGN || props["ISO3166-1-Alpha-2"] || props["ISO_A2"] || "Unknown";
-
-          // Try to read count/ratio from feature props; if missing, use match helper
           let displayedCount = Number(props._count ?? 0);
           let displayedRatio = Number(props._ratio ?? 0);
           let displayedNorm = Number(props._norm ?? 0);
-
           if (!displayedCount || displayedRatio === 0) {
             displayedCount = matchCountForProps(props);
             displayedRatio = total > 0 ? displayedCount / total : 0;
-            // normalized relative to max country (0..1)
             displayedNorm = maxCount > 0 ? displayedCount / maxCount : 0;
           }
-
           const pct = (displayedRatio * 100).toFixed(1);
           const pctOfTop = (displayedNorm * 100).toFixed(1);
-
           const popup = new MapLibreGL.Popup({ offset: 12 })
             .setLngLat(lngLat)
             .setHTML(`<div class="text-sm"><strong>${displayName}</strong><div>${displayedCount} clicks (${pct}% of total, ${pctOfTop}% of top)</div></div>`)
             .addTo(map);
-
           popupRef.current = popup;
-
           onCountryClick?.(props, { lng: lngLat.lng, lat: lngLat.lat });
         };
 
@@ -365,9 +345,7 @@ export default function MapCountryHeatmap({
             if (map.getLayer(lineLayerId)) map.removeLayer(lineLayerId);
             if (map.getLayer(fillLayerId)) map.removeLayer(fillLayerId);
             if (map.getSource(sourceId)) map.removeSource(sourceId);
-          } catch (err) {
-            // ignore
-          }
+          } catch (err) { }
           try {
             popupRef.current?.remove();
             popupRef.current = null;
