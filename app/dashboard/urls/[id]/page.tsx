@@ -6,6 +6,7 @@ import Referrers from "@/components/dashboard/url/Referrers";
 import Devices from "@/components/dashboard/url/Devices";
 import Browsers from "@/components/dashboard/url/Browsers";
 import ClicksTable from "@/components/dashboard/url/ClicksTable";
+import MapCountryHeatmap from "@/components/ui/MapCountryHeatmap";
 
 export default async function UrlDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const session = await isAuthenticated({ behavior: "redirect" });
