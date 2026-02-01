@@ -5,7 +5,17 @@ import Link from "next/link";
 import { ShortUrl } from "@/lib/db/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
 import { getShortUrlsPaginated } from "@/app/actions/short-urls";
-
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import {
+    Select,
+    SelectContent,
+    SelectGroup,
+    SelectItem,
+    SelectLabel,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
 
 
 export default function UrlsTable({ initialUrls }: { initialUrls: ShortUrl[] }) {
@@ -85,7 +95,8 @@ export default function UrlsTable({ initialUrls }: { initialUrls: ShortUrl[] }) 
             if (debouncedSearch) params.set('search', debouncedSearch);
             if (isActiveFilter !== 'all') params.set('isActive', isActiveFilter === 'true' ? 'true' : 'false');
 
-            const json = await getShortUrlsPaginated({ page, pageSize, search, sortBy, sortDir });
+            const json = await getShortUrlsPaginated({ page, pageSize, search, sortBy, sortDir, isActive: isActiveFilter !== 'all' ? isActiveFilter === 'true' : undefined });
+            console.log("Fetched data:", json);
             setData(json.data || []);
             setTotal(json.total || 0);
         } catch (e) {
@@ -95,9 +106,9 @@ export default function UrlsTable({ initialUrls }: { initialUrls: ShortUrl[] }) 
         }
     }, [page, pageSize, debouncedSearch, sortBy, sortDir, isActiveFilter]);
 
-    // React.useEffect(() => {
-    //     fetchData();
-    // }, [fetchData]);
+    React.useEffect(() => {
+        fetchData();
+    }, [fetchData]);
 
     // debounce search
     React.useEffect(() => {
@@ -113,17 +124,33 @@ export default function UrlsTable({ initialUrls }: { initialUrls: ShortUrl[] }) 
     return (
         <div>
             <div className="flex items-center gap-2 mb-4">
-                <input placeholder="Search slug, URL, title..." value={search} onChange={(e) => setSearch(e.target.value)} className="input" />
-                <select value={isActiveFilter} onChange={(e) => setIsActiveFilter(e.target.value)} className="select">
-                    <option value="all">All</option>
-                    <option value="true">Active</option>
-                    <option value="false">Inactive</option>
-                </select>
-                <select value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }} className="select">
-                    <option value={10}>10</option>
-                    <option value={25}>25</option>
-                    <option value={50}>50</option>
-                </select>
+                <Input placeholder="Search slug, URL, title..." value={search} onChange={(e) => setSearch(e.target.value)} className="input" />
+                <Select value={isActiveFilter} onValueChange={(value) => setIsActiveFilter(value)}>
+                    <SelectTrigger className="w-full max-w-48">
+                        <SelectValue placeholder="Select a fruit" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectGroup>
+                            <SelectLabel>Link Status</SelectLabel>
+                            <SelectItem value="all">All</SelectItem>
+                            <SelectItem value="true">Active</SelectItem>
+                            <SelectItem value="false">Inactive</SelectItem>
+                        </SelectGroup>
+                    </SelectContent>
+                </Select>
+                <Select value={String(pageSize)} onValueChange={(value) => setPageSize(Number(value))}>
+                    <SelectTrigger className="w-full max-w-48">
+                        <SelectValue placeholder="Select a fruit" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectGroup>
+                            <SelectLabel>Page Size</SelectLabel>
+                            <SelectItem value="10">10</SelectItem>
+                            <SelectItem value="25">25</SelectItem>
+                            <SelectItem value="50">50</SelectItem>
+                        </SelectGroup>
+                    </SelectContent>
+                </Select>
                 <div className="ml-auto text-sm text-muted-foreground">{loading ? 'Loading...' : `Showing ${Math.min((page - 1) * pageSize + 1, total)}-${Math.min(page * pageSize, total)} of ${total}`}</div>
             </div>
 
@@ -156,8 +183,8 @@ export default function UrlsTable({ initialUrls }: { initialUrls: ShortUrl[] }) 
 
             <div className="flex items-center justify-between mt-3">
                 <div className="flex items-center gap-2">
-                    <button className="btn" disabled={page === 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>Previous</button>
-                    <button className="btn" disabled={page * pageSize >= total} onClick={() => setPage((p) => p + 1)}>Next</button>
+                    <Button size="sm" variant="ghost" disabled={page === 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>Previous</Button>
+                    <Button size="sm" variant="ghost" disabled={page * pageSize >= total} onClick={() => setPage((p) => p + 1)}>Next</Button>
                 </div>
                 <div className="text-sm">Page {page} of {Math.max(1, Math.ceil(total / pageSize))}</div>
             </div>

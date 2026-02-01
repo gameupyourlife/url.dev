@@ -26,6 +26,8 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { getDailyClicks } from "@/app/actions/analytics";
+import { Analytics } from "@/lib/db/types";
+import { unknown } from "zod";
 
 export const description = "An interactive area chart";
 
@@ -37,9 +39,21 @@ const chartConfig = {
         label: "Clicks",
         color: "var(--chart-1)",
     },
+    unknown: {
+        label: "Unknown",
+        color: "var(--chart-1)",
+    },
+    desktop: {
+        label: "Desktop",
+        color: "var(--chart-2)",
+    },
     mobile: {
         label: "Mobile",
-        color: "var(--chart-2)",
+        color: "var(--chart-3)",
+    },
+    tablet: {
+        label: "Tablet",
+        color: "var(--chart-4)",
     },
 } satisfies ChartConfig;
 
@@ -49,7 +63,7 @@ export function TrafficChart({
     data: {
         date: string;
         clicks: number;
-    }[];
+    }[] | Analytics["clicksByDateByDevice"];
 }) {
     const [timeRange, setTimeRange] = React.useState("90d");
 
@@ -70,9 +84,13 @@ export function TrafficChart({
         <Card className="pt-0">
             <CardHeader className="flex items-center gap-2 space-y-0 py-5 sm:flex-row">
                 <div className="grid flex-1 gap-1">
-                    <CardTitle>Area Chart - Interactive</CardTitle>
+                    <CardTitle>Traffic chart</CardTitle>
                     <CardDescription>
-                        Showing total visitors for the last 3 months
+                        Showing total traffic for the last {timeRange === "90d"
+                            ? "3 months"
+                            : timeRange === "30d"
+                                ? "30 days"
+                                : "7 days"}
                     </CardDescription>
                 </div>
                 <Select
@@ -80,27 +98,24 @@ export function TrafficChart({
                     onValueChange={setTimeRange}
                 >
                     <SelectTrigger
-                        className="hidden w-[160px] rounded-lg sm:ml-auto sm:flex"
+                        className="hidden w-[160px]  sm:ml-auto sm:flex"
                         aria-label="Select a value"
                     >
                         <SelectValue placeholder="Last 3 months" />
                     </SelectTrigger>
-                    <SelectContent className="rounded-xl">
+                    <SelectContent>
                         <SelectItem
                             value="90d"
-                            className="rounded-lg"
                         >
                             Last 3 months
                         </SelectItem>
                         <SelectItem
                             value="30d"
-                            className="rounded-lg"
                         >
                             Last 30 days
                         </SelectItem>
                         <SelectItem
                             value="7d"
-                            className="rounded-lg"
                         >
                             Last 7 days
                         </SelectItem>
@@ -129,6 +144,61 @@ export function TrafficChart({
                                 <stop
                                     offset="95%"
                                     stopColor="var(--color-clicks)"
+                                    stopOpacity={0.1}
+                                />
+                            </linearGradient>
+
+                            <linearGradient
+                                id="fillDesktop"
+                                x1="0"
+                                y1="0"
+                                x2="0"
+                                y2="1"
+                            >
+                                <stop
+                                    offset="5%"
+                                    stopColor="var(--color-desktop)"
+                                    stopOpacity={0.8}
+                                />
+                                <stop
+                                    offset="95%"
+                                    stopColor="var(--color-desktop)"
+                                    stopOpacity={0.1}
+                                />
+                            </linearGradient>
+                            <linearGradient
+                                id="fillMobile"
+                                x1="0"
+                                y1="0"
+                                x2="0"
+                                y2="1"
+                            >
+                                <stop
+                                    offset="5%"
+                                    stopColor="var(--color-mobile)"
+                                    stopOpacity={0.8}
+                                />
+                                <stop
+                                    offset="95%"
+                                    stopColor="var(--color-mobile)"
+                                    stopOpacity={0.1}
+                                />
+                            </linearGradient>
+                            <linearGradient
+                                id="fillTablet"
+                                x1="0"
+                                y1="0"
+                                x2="0"
+                                y2="1"
+                            >
+                                <stop
+                                    offset="5%"
+                                    stopColor="var(--color-tablet)"
+                                    stopOpacity={0.8}
+                                />
+                                <stop
+                                    offset="95%"
+                                    stopColor="var(--color-tablet)"
                                     stopOpacity={0.1}
                                 />
                             </linearGradient>
@@ -166,10 +236,31 @@ export function TrafficChart({
                         />
 
                         <Area
-                            dataKey="clicks"
+                            dataKey={data[0].hasOwnProperty("clicks") ? "clicks" : "unknown"}
                             type="natural"
                             fill="url(#fillClicks)"
                             stroke="var(--color-clicks)"
+                            stackId="a"
+                        />
+                        <Area
+                            dataKey="desktop"
+                            type="natural"
+                            fill="url(#fillDesktop)"
+                            stroke="var(--color-desktop)"
+                            stackId="a"
+                        />
+                        <Area
+                            dataKey="mobile"
+                            type="natural"
+                            fill="url(#fillMobile)"
+                            stroke="var(--color-mobile)"
+                            stackId="a"
+                        />
+                        <Area
+                            dataKey="tablet"
+                            type="natural"
+                            fill="url(#fillTablet)"
+                            stroke="var(--color-tablet)"
                             stackId="a"
                         />
                         <ChartLegend content={<ChartLegendContent />} />

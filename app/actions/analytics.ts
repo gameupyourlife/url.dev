@@ -5,6 +5,60 @@ import { click, shortUrl, member } from "@/lib/db/schema";
 import { UrlClick, ShortUrl } from "@/lib/db/types";
 import { and, eq, sql, desc } from "drizzle-orm";
 
+
+/**
+ * Get total clicks for a specific URL
+ */
+export async function getTotalClicks({ urlId }: { urlId: string }) {
+    const session = await isAuthenticated({ behavior: "error", permissions: { shortUrl: ["read", "analytics"] } });
+    if (!urlId) throw new Error("urlId required");
+    const res = await db.select({ total: sql`coalesce(sum(${click.id} IS NOT NULL::int), 0)` })
+        .from(click)
+        .where(eq(click.shortUrlId, urlId));
+    return Number(res[0]?.total ?? 0);
+}
+
+/**
+ * Get unique visitors for a specific URL (by unique IP address)
+ */
+export async function getUniqueVisitors({ urlId }: { urlId: string }) {
+    const session = await isAuthenticated({ behavior: "error", permissions: { shortUrl: ["read", "analytics"] } });
+    if (!urlId) throw new Error("urlId required");
+    const res = await db.select({ total: sql`coalesce(count(distinct ${click.ipAddress}), 0)` })
+        .from(click)
+        .where(eq(click.shortUrlId, urlId));
+    return Number(res[0]?.total ?? 0);
+}
+
+/**
+ * Get the top country for a specific URL
+ */
+export async function getTopCountry({ urlId }: { urlId: string }) {
+    const session = await isAuthenticated({ behavior: "error", permissions: { shortUrl: ["read", "analytics"] } });
+    if (!urlId) throw new Error("urlId required");
+    const res = await db.select({ country: click.countryName, clicks: sql`count(*)` })
+        .from(click)
+        .where(eq(click.shortUrlId, urlId))
+        .groupBy(click.countryName)
+        .orderBy(desc(sql`count(*)`))
+        .limit(1);
+    return res[0]?.country ?? null;
+}
+
+/**
+ * Get device diversity (number of unique device types) for a specific URL
+ */
+export async function getDeviceDiversity({ urlId }: { urlId: string }) {
+    const session = await isAuthenticated({ behavior: "error", permissions: { shortUrl: ["read", "analytics"] } });
+    if (!urlId) throw new Error("urlId required");
+    const res = await db.select({ total: sql`coalesce(count(distinct ${click.deviceType}), 0)` })
+        .from(click)
+        .where(eq(click.shortUrlId, urlId));
+    return Number(res[0]?.total ?? 0);
+}
+
+
+
 export async function getOverviewMetrics() {
     const session = await isAuthenticated({ behavior: "error", permissions: { shortUrl: ["read", "analytics"] } });
 
