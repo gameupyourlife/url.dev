@@ -189,6 +189,28 @@ export async function deleteShortUrl(id: string) {
             eq(shortUrl.userId, session.user.id)
     ));
 }
+
+export async function updateShortUrl(id: string, data: { url?: string; slug?: string; title?: string; isActive?: boolean }) {
+    const session = await isAuthenticated({ behavior: "error", permissions: { shortUrl: ["write"] } });
+
+    const updateData: any = {};
+    if (data.url !== undefined) updateData.originalUrl = data.url;
+    if (data.slug !== undefined) updateData.slug = data.slug;
+    if (data.title !== undefined) updateData.title = data.title;
+    if (data.isActive !== undefined) updateData.isActive = data.isActive;
+    updateData.updatedAt = new Date();
+
+    const result = await db.update(shortUrl).set(updateData).where(and(
+        eq(shortUrl.id, id),
+        session.session.activeOrganizationId ?
+            eq(shortUrl.organizationId, session.session.activeOrganizationId)
+            :
+            eq(shortUrl.userId, session.user.id)
+    )).returning();
+
+    return result[0];
+}
+
 export async function getShortUrlsPaginated({ page = 1, pageSize = 25, search, sortBy = 'createdAt', sortDir = 'desc', isActive }: {
     page?: number;
     pageSize?: number;

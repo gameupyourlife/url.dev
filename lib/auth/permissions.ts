@@ -5,7 +5,7 @@ const statement = {
     ...defaultStatements,
 
     shortUrl: ["read", "write", "delete", "analytics"],
-    apiKeys: ["create", "delete"],
+    apiKeys: ["read", "create", "delete"],
     settings: ["customDomain", "branding", "security"],
 } as const;
 
@@ -19,19 +19,19 @@ export const member = ac.newRole({
 export const developer = ac.newRole({
     ...memberAc.statements,
     shortUrl: ["read", "write", "delete", "analytics"],
-    apiKeys: ["create", "delete"],
+    apiKeys: ["read", "create", "delete"],
 });
 
 export const admin = ac.newRole({
     ...adminAc.statements,
     shortUrl: ["read", "write", "delete", "analytics"],
-    apiKeys: ["create", "delete"],
+    apiKeys: ["read", "create", "delete"],
     settings: ["customDomain", "branding", "security"],
 });
 
 export const owner = ac.newRole({
     ...ownerAc.statements,
     shortUrl: ["read", "write", "delete", "analytics"],
-    apiKeys: ["create", "delete"],
+    apiKeys: ["read", "create", "delete"],
     settings: ["customDomain", "branding", "security"],
 });

@@ -17,9 +17,11 @@ import { useTheme } from "next-themes";
 export function UserNav({
     user,
     isNavigatedTo,
+    className,
 }: {
     user: { name?: string; email?: string; image?: string };
     isNavigatedTo?: boolean;
+    className?: string;
 }) {
     const [open, setOpen] = useState(false);
     const theme = useTheme();
@@ -32,7 +34,7 @@ export function UserNav({
             <DropdownMenuTrigger asChild>
                 <Button
                     variant="ghost"
-                    className={"relative h-10 w-10 rounded-full p-0"}
+                    className={cn("relative h-10 w-10 rounded-full p-0", className)}
                 >
                     <Avatar className={"h-10 w-10"}>
                         {user?.image ? (

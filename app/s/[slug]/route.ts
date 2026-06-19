@@ -60,6 +60,15 @@ export async function GET(
         // Resolve country-specific redirect target (if configured in metadata)
         const { target: resolvedTarget, matchedRule } = resolveRedirectForCountry(url.originalUrl, url.metadata, analytics.country?.code || analytics.cfCountry || undefined);
 
+        let searchParams = new URLSearchParams(analytics.searchParams || {});
+
+        // Add utm parameters to the resolved target if they exist
+        url.utmCampaign && searchParams.set("utm_campaign", url.utmCampaign);
+        url.utmSource && searchParams.set("utm_source", url.utmSource);
+        url.utmMedium && searchParams.set("utm_medium", url.utmMedium);
+        url.utmContent && searchParams.set("utm_content", url.utmContent);
+        url.utmTerm && searchParams.set("utm_term", url.utmTerm);
+
         // If a relative path was configured, resolve it against the original URL
         const redirectTarget = resolvedTarget.startsWith("/") ? new URL(resolvedTarget, url.originalUrl).toString() : resolvedTarget;
 
@@ -67,7 +76,10 @@ export async function GET(
             console.log(`Country redirect applied for slug=${slug} country=${analytics.country?.code || analytics.cfCountry} => target=${redirectTarget}`);
         }
 
-        return NextResponse.redirect(redirectTarget, 307);
+        const urlObj = new URL(redirectTarget);
+        urlObj.search = searchParams.toString();
+
+        return NextResponse.redirect(urlObj, 302);
     } catch (error) {
         console.error("Error redirecting URL:", error);
         return NextResponse.json(

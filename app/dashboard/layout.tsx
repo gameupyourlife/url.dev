@@ -1,9 +1,9 @@
 import { DashboardTabsClient } from "@/components/dashboard/DashboardTabsClient";
-import { UserNav } from "@/components/dashboard/UserNav";
-import { Tabs, TabsList } from "@/components/ui/tabs";
+import { Tabs } from "@/components/ui/tabs";
+import { auth } from "@/lib/auth";
 import { isAuthenticated } from "@/lib/auth/guards";
-import { cn } from "@/lib/utils";
 import { LinkIcon } from "lucide-react";
+import { headers } from "next/headers";
 import Link from "next/link";
 
 export default async function Layout({
@@ -13,28 +13,58 @@ export default async function Layout({
 }) {
     const session = await isAuthenticated({ behavior: "redirect" });
 
-    return (
-        <div className="container mx-auto p-4 flex flex-col gap-6">
-            <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-2">
-                <div className="flex gap-2">
-                    {/* <h1 className="text-3xl font-bold tracking-tight mb-1">
-                        Welcome back
-                        {session?.user?.name ? `, ${session.user.name}` : ""}!
-                    </h1>
-                    <p className="text-muted-foreground text-base">
-                        Your URL analytics dashboard
-                    </p> */}
-                    <LinkIcon className="w-10 h-10 text-primary" />
-                    <p className="text-3xl font-bold tracking-tight">
-                        URL.DEV
-                    </p>
-                </div>
+    const hdrs = await headers();
+    const activeOrganization = session.session.activeOrganizationId
+        ? await auth.api.getFullOrganization({
+              headers: hdrs,
+              query: {
+                  organizationId: session.session.activeOrganizationId,
+              },
+          })
+        : null;
 
-                <Tabs orientation="horizontal">
-                    <DashboardTabsClient />
-                </Tabs>
+    const usersOrganizations = await auth.api.listOrganizations({
+        query: {
+            userId: session.user.id
+        },
+        // This endpoint requires session cookies.
+        headers: await headers(),
+    });
+
+    return (
+        <div className="min-h-screen bg-background">
+            <header className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+                <div className="container mx-auto px-4 py-3">
+                    <div className="flex items-center justify-between flex-row ">
+                        {/* Logo */}
+                        <Link
+                            href="/dashboard"
+                            className="flex items-center gap-2 shrink-0"
+                        >
+                            <div className="h-9 w-9 rounded-lg bg-primary flex items-center justify-center">
+                                <LinkIcon className="h-5 w-5 text-primary-foreground" />
+                            </div>
+                            <span className="text-xl font-bold tracking-tight hidden sm:block">
+                                URL.DEV
+                            </span>
+                        </Link>
+
+                        {/* Navigation */}
+                        <Tabs
+                            orientation="horizontal"
+                            className=""
+                        >
+                            <DashboardTabsClient
+                                session={session}
+                                activeOrganization={activeOrganization}
+                                organizations={usersOrganizations}
+                            />
+                        </Tabs>
+                    </div>
+                </div>
             </header>
-            {children}
+
+            <main className="container mx-auto px-4 py-6">{children}</main>
         </div>
     );
 }
