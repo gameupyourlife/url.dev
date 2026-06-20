@@ -2,17 +2,15 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { deleteShortUrl, updateShortUrl } from "@/app/actions/short-urls";
+import { deleteShortUrl } from "@/app/actions/short-urls";
 import {
     QrCode,
     Pencil,
     Trash2,
     MoreHorizontal,
-    X,
-    Check,
     Loader2,
     Download,
     Share2,
@@ -38,38 +36,15 @@ import {
 interface UrlDetailsClientProps {
     urlId: string;
     slug: string;
-    destinationUrl: string;
 }
 
-export function UrlDetailsClient({ urlId, slug, destinationUrl }: UrlDetailsClientProps) {
+export function UrlDetailsClient({ urlId, slug }: UrlDetailsClientProps) {
     const router = useRouter();
-    const [isEditing, setIsEditing] = useState(false);
-    const [editUrl, setEditUrl] = useState(destinationUrl);
-    const [isUpdating, setIsUpdating] = useState(false);
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
     const [showQrDialog, setShowQrDialog] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
 
     const shortUrl = `https://url.dev/s/${slug}`;
-
-    async function handleUpdate() {
-        if (!editUrl.trim()) {
-            toast.error("Destination URL is required");
-            return;
-        }
-
-        setIsUpdating(true);
-        try {
-            await updateShortUrl(urlId, { url: editUrl });
-            toast.success("URL updated successfully");
-            setIsEditing(false);
-            router.refresh();
-        } catch (error: any) {
-            toast.error(error?.message || "Failed to update URL");
-        } finally {
-            setIsUpdating(false);
-        }
-    }
 
     async function handleDelete() {
         setIsDeleting(true);
@@ -113,65 +88,37 @@ export function UrlDetailsClient({ urlId, slug, destinationUrl }: UrlDetailsClie
     return (
         <>
             <div className="flex items-center gap-2 shrink-0">
-                {isEditing ? (
-                    <div className="flex items-center gap-2">
-                        <Input
-                            value={editUrl}
-                            onChange={(e) => setEditUrl(e.target.value)}
-                            placeholder="https://example.com"
-                            className="w-64"
-                        />
-                        <Button size="sm" onClick={handleUpdate} disabled={isUpdating}>
-                            {isUpdating ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                                <Check className="h-4 w-4" />
-                            )}
+                <Button variant="outline" size="sm" onClick={() => setShowQrDialog(true)}>
+                    <QrCode className="h-4 w-4 mr-2" />
+                    QR Code
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleShare}>
+                    <Share2 className="h-4 w-4 mr-2" />
+                    Share
+                </Button>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm">
+                            <MoreHorizontal className="h-4 w-4" />
                         </Button>
-                        <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => {
-                                setIsEditing(false);
-                                setEditUrl(destinationUrl);
-                            }}
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuItem asChild>
+                            <Link href={`/dashboard/urls/${urlId}/edit`}>
+                                <Pencil className="h-4 w-4 mr-2" />
+                                Edit URL
+                            </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => setShowDeleteDialog(true)}
                         >
-                            <X className="h-4 w-4" />
-                        </Button>
-                    </div>
-                ) : (
-                    <>
-                        <Button variant="outline" size="sm" onClick={() => setShowQrDialog(true)}>
-                            <QrCode className="h-4 w-4 mr-2" />
-                            QR Code
-                        </Button>
-                        <Button variant="outline" size="sm" onClick={handleShare}>
-                            <Share2 className="h-4 w-4 mr-2" />
-                            Share
-                        </Button>
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="outline" size="sm">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => setIsEditing(true)}>
-                                    <Pencil className="h-4 w-4 mr-2" />
-                                    Edit Destination
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                    className="text-destructive"
-                                    onClick={() => setShowDeleteDialog(true)}
-                                >
-                                    <Trash2 className="h-4 w-4 mr-2" />
-                                    Delete Link
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </>
-                )}
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete Link
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </div>
 
             {/* Delete Dialog */}

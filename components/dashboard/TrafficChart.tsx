@@ -25,9 +25,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { getDailyClicks } from "@/app/actions/analytics";
 import { Analytics } from "@/lib/db/types";
-import { unknown } from "zod";
 
 export const description = "An interactive area chart";
 
@@ -80,6 +78,11 @@ export function TrafficChart({
         return date >= startDate;
     });
 
+    const hasData = filteredData.some((item) =>
+        Object.entries(item).some(([key, value]) => key !== "date" && typeof value === "number" && value > 0),
+    );
+
+
     return (
         <Card className="pt-0">
             <CardHeader className="flex items-center gap-2 space-y-0 py-5 sm:flex-row">
@@ -98,7 +101,7 @@ export function TrafficChart({
                     onValueChange={setTimeRange}
                 >
                     <SelectTrigger
-                        className="hidden w-[160px]  sm:ml-auto sm:flex"
+                        className="hidden w-40 sm:ml-auto sm:flex"
                         aria-label="Select a value"
                     >
                         <SelectValue placeholder="Last 3 months" />
@@ -123,11 +126,12 @@ export function TrafficChart({
                 </Select>
             </CardHeader>
             <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
-                <ChartContainer
-                    config={chartConfig}
-                    className="aspect-auto h-[250px] w-full"
-                >
-                    <AreaChart data={filteredData}>
+                {hasData ? (
+                    <ChartContainer
+                        config={chartConfig}
+                        className="aspect-auto h-62.5 w-full"
+                    >
+                        <AreaChart data={filteredData}>
                         <defs>
                             <linearGradient
                                 id="fillClicks"
@@ -218,54 +222,61 @@ export function TrafficChart({
                                 });
                             }}
                         />
-                        <ChartTooltip
-                            cursor={false}
-                            content={
-                                <ChartTooltipContent
-                                    labelFormatter={(value) => {
-                                        return new Date(
-                                            value,
-                                        ).toLocaleDateString("en-US", {
-                                            month: "short",
-                                            day: "numeric",
-                                        });
-                                    }}
-                                    indicator="dot"
-                                />
-                            }
-                        />
+                            <ChartTooltip
+                                cursor={false}
+                                content={
+                                    <ChartTooltipContent
+                                        labelFormatter={(value) => {
+                                            return new Date(
+                                                value,
+                                            ).toLocaleDateString("en-US", {
+                                                month: "short",
+                                                day: "numeric",
+                                            });
+                                        }}
+                                        indicator="dot"
+                                    />
+                                }
+                            />
 
-                        <Area
-                            dataKey={data[0].hasOwnProperty("clicks") ? "clicks" : "unknown"}
-                            type="natural"
-                            fill="url(#fillClicks)"
-                            stroke="var(--color-clicks)"
-                            stackId="a"
-                        />
-                        <Area
-                            dataKey="desktop"
-                            type="natural"
-                            fill="url(#fillDesktop)"
-                            stroke="var(--color-desktop)"
-                            stackId="a"
-                        />
-                        <Area
-                            dataKey="mobile"
-                            type="natural"
-                            fill="url(#fillMobile)"
-                            stroke="var(--color-mobile)"
-                            stackId="a"
-                        />
-                        <Area
-                            dataKey="tablet"
-                            type="natural"
-                            fill="url(#fillTablet)"
-                            stroke="var(--color-tablet)"
-                            stackId="a"
-                        />
-                        <ChartLegend content={<ChartLegendContent />} />
-                    </AreaChart>
-                </ChartContainer>
+                            <Area
+                                dataKey={data[0]?.hasOwnProperty("clicks") ? "clicks" : "unknown"}
+                                type="natural"
+                                fill="url(#fillClicks)"
+                                stroke="var(--color-clicks)"
+                                stackId="a"
+                            />
+                            <Area
+                                dataKey="desktop"
+                                type="natural"
+                                fill="url(#fillDesktop)"
+                                stroke="var(--color-desktop)"
+                                stackId="a"
+                            />
+                            <Area
+                                dataKey="mobile"
+                                type="natural"
+                                fill="url(#fillMobile)"
+                                stroke="var(--color-mobile)"
+                                stackId="a"
+                            />
+                            <Area
+                                dataKey="tablet"
+                                type="natural"
+                                fill="url(#fillTablet)"
+                                stroke="var(--color-tablet)"
+                                stackId="a"
+                            />
+
+
+                            <ChartLegend content={<ChartLegendContent />} />
+                        </AreaChart>
+                    </ChartContainer>
+                ) : (
+                    <div className="flex h-62.5 items-center justify-center rounded-lg border border-border/60 bg-muted/20 px-4 text-center text-sm text-muted-foreground">
+                        No traffic data for this time range.
+                    </div>
+                )}
             </CardContent>
         </Card>
     );

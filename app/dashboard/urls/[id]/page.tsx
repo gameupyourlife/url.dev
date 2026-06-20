@@ -134,7 +134,6 @@ export default async function UrlAnalyticsPage({
                     <UrlDetailsClient
                         urlId={urlId}
                         slug={advancedData.slug}
-                        destinationUrl={advancedData.originalUrl}
                     />
                 </div>
             </div>
