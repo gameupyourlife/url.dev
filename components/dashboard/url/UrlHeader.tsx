@@ -23,7 +23,6 @@ export default async function UrlHeader({ urlId }: { urlId: string }) {
                     <div className="mt-3 flex items-center gap-2">
                         <Link className="text-indigo-600" href={`/s/${url.slug}`} target="_blank">Open</Link>
                         {/* Client copy button */}
-                        {/* @ts-expect-error Server component including client */}
                         <CopyButton text={shortLink} />
                     </div>
                 </div>
