@@ -40,7 +40,7 @@ function DashboardPreview() {
         </div>
         <div className="mx-auto flex items-center gap-2 rounded-lg bg-background/80 px-3 py-1 text-xs text-muted-foreground font-mono">
           <Link2 className="h-3 w-3" />
-          app.url.dev/dashboard
+          {process.env.NEXT_PUBLIC_BASE_URL}/dashboard
         </div>
       </div>
 
@@ -87,7 +87,7 @@ function DashboardPreview() {
               key={r.slug}
               className="flex items-center gap-3 rounded-lg border border-border/60 bg-background/60 px-3 py-2"
             >
-              <span className="font-mono text-xs text-primary">url.dev{r.slug}</span>
+              <span className="font-mono text-xs text-primary">{process.env.NEXT_PUBLIC_BASE_URL}{r.slug}</span>
               <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
                 <div className={`absolute inset-y-0 left-0 ${r.w} rounded-full bg-primary/70`} />
               </div>
@@ -249,21 +249,21 @@ export default function Page() {
   const [activeTab, setActiveTab] = useState<keyof typeof codeExamples>("curl");
 
   const handleShorten = () => {
-    if (url) setShortened(`url.dev/${Math.random().toString(36).substring(2, 8)}`);
+    if (url) setShortened(`${process.env.NEXT_PUBLIC_BASE_URL}/${Math.random().toString(36).substring(2, 8)}`);
   };
 
   const copyToClipboard = () => {
-    navigator.clipboard.writeText(`https://${shortened}`);
+    navigator.clipboard.writeText(`${process.env.NEXT_PUBLIC_BASE_URL}/${shortened}`);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const codeExamples = {
-    curl: `curl -X POST https://url.dev/api/v1/urls \\
+    curl: `curl -X POST ${process.env.NEXT_PUBLIC_BASE_URL}/api/v1/urls \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{"url": "https://example.com", "slug": "launch"}'`,
-    javascript: `const res = await fetch("https://url.dev/api/v1/urls", {
+    javascript: `const res = await fetch("${process.env.NEXT_PUBLIC_BASE_URL}/api/v1/urls", {
   method: "POST",
   headers: {
     Authorization: "Bearer YOUR_API_KEY",
@@ -275,7 +275,7 @@ const data = await res.json();`,
     python: `import requests
 
 res = requests.post(
-    "https://url.dev/api/v1/urls",
+    f"${process.env.NEXT_PUBLIC_BASE_URL}/api/v1/urls",
     headers={"Authorization": "Bearer YOUR_API_KEY"},
     json={"url": "https://example.com", "slug": "launch"},
 )
@@ -652,11 +652,11 @@ data = res.json()`,
                   <code className="font-mono text-secondary">
                     {`{
   "id": "abc123xyz",
-  "shortUrl": "https://url.dev/launch",
+  "shortUrl": "${process.env.NEXT_PUBLIC_BASE_URL}/launch",
   "originalUrl": "https://example.com",
   "clicks": 0,
   "createdAt": "2026-06-20T12:00:00Z",
-  "qrCode": "https://url.dev/qr/launch"
+  "qrCode": "${process.env.NEXT_PUBLIC_BASE_URL}/qr/launch"
 }`}
                   </code>
                 </pre>

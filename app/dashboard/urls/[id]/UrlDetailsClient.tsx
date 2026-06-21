@@ -33,7 +33,6 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { db } from "@/lib/db";
 
 interface UrlDetailsClientProps {
     urlId: string;
@@ -46,7 +45,7 @@ export function UrlDetailsClient({ urlId, slug }: UrlDetailsClientProps) {
     const [showQrDialog, setShowQrDialog] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
 
-    const shortUrl = `https://url.dev/s/${slug}`;
+    const shortUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/s/${slug}`;
 
     async function handleDelete() {
         setIsDeleting(true);
@@ -142,7 +141,7 @@ export function UrlDetailsClient({ urlId, slug }: UrlDetailsClientProps) {
                     <AlertDialogHeader>
                         <AlertDialogTitle>Delete Link</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This will permanently delete the short link <strong>url.dev/s/{slug}</strong>.
+                            This will permanently delete the short link <strong>{`${process.env.NEXT_PUBLIC_BASE_URL}/s/${slug}`}</strong>.
                             Anyone with this link will no longer be able to access it.
                         </AlertDialogDescription>
                     </AlertDialogHeader>

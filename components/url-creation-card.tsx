@@ -854,7 +854,7 @@ export function UrlCreationCard({
                                         <InputGroup>
                                             <InputGroupAddon>
                                                 <InputGroupText className="text-muted-foreground">
-                                                    url.dev/s/
+                                                    {`${process.env.NEXT_PUBLIC_BASE_URL}/s/`}
                                                 </InputGroupText>
                                             </InputGroupAddon>
                                             <InputGroupInput
@@ -895,7 +895,7 @@ export function UrlCreationCard({
                             <p className="font-medium text-foreground">Preview</p>
                             <p className="mt-1 truncate">
                                 <Link2 className="mr-1 inline h-3.5 w-3.5" />
-                                url.dev/s/
+                                {`${process.env.NEXT_PUBLIC_BASE_URL}/s/`}
                                 {form.getFieldValue("slug")?.trim() || (isEditMode ? initialData?.slug : "auto-id")}
                             </p>
                         </div>

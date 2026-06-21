@@ -250,7 +250,7 @@ export function OrganizationSettings({
                             </div>
                             <div>
                                 <h2 className="text-xl font-semibold">{organization.name}</h2>
-                                <p className="text-sm text-muted-foreground">url.dev/{organization.slug}</p>
+                                <p className="text-sm text-muted-foreground">{`${process.env.NEXT_PUBLIC_BASE_URL}/${organization.slug}`}</p>
                             </div>
                         </div>
                         {isAdmin && (

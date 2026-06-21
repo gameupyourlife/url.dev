@@ -7,6 +7,7 @@ export interface CreemFeature {
     apiKeys: boolean;
     customDomain: boolean;
     teamManagement: boolean;
+    countryHeatmap: boolean;
 }
 
 export interface FeatureEvaluationResult {
@@ -23,6 +24,7 @@ export const CREEM_FEATURE_PLANS: Record<CreemPlan, CreemFeature> = {
         apiKeys: false,
         customDomain: false,
         teamManagement: false,
+        countryHeatmap: true,
     },
     starter: {
         basicLinks: true,
@@ -30,6 +32,7 @@ export const CREEM_FEATURE_PLANS: Record<CreemPlan, CreemFeature> = {
         apiKeys: true,
         customDomain: false,
         teamManagement: false,
+        countryHeatmap: true,
     },
     pro: {
         basicLinks: true,
@@ -37,6 +40,7 @@ export const CREEM_FEATURE_PLANS: Record<CreemPlan, CreemFeature> = {
         apiKeys: true,
         customDomain: true,
         teamManagement: true,
+        countryHeatmap: true,
     },
     enterprise: {
         basicLinks: true,
@@ -44,5 +48,6 @@ export const CREEM_FEATURE_PLANS: Record<CreemPlan, CreemFeature> = {
         apiKeys: true,
         customDomain: true,
         teamManagement: true,
+        countryHeatmap: true,
     },
 };

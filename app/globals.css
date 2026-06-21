@@ -63,8 +63,17 @@
   --tracking-wide: calc(var(--tracking-normal) + 0.025em);
   --tracking-wider: calc(var(--tracking-normal) + 0.05em);
   --tracking-widest: calc(var(--tracking-normal) + 0.1em);
+  --color-map-label-selected: var(--map-label-selected);
+  --color-map-label-hover: var(--map-label-hover);
+  --color-map-label: var(--map-label);
+  --color-map-region-focus-ring: var(--map-region-focus-ring);
+  --color-map-region-stroke-hover: var(--map-region-stroke-hover);
+  --color-map-region-stroke: var(--map-region-stroke);
+  --color-map-region-disabled: var(--map-region-disabled);
+  --color-map-region-selected: var(--map-region-selected);
+  --color-map-region-hover: var(--map-region-hover);
+  --color-map-region: var(--map-region);
 }
-
 
 :root {
   --background: oklch(0.9821 0 0);
@@ -102,7 +111,29 @@
   --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   --radius: 0.625rem;
+  --map-region: oklch(44.3% 0.11 240.79);
+  --map-region-hover: oklch(50% 0.134 242.748);
+  --map-region-selected: oklch(39.1% 0.09 240.875);
+  --map-region-disabled: oklch(55.4% 0.046 257.417);
+  --map-region-stroke: oklch(28.2% 0.091 267.935);
+  --map-region-stroke-hover: oklch(28.2% 0.091 267.935);
+  --map-region-focus-ring: oklch(70.7% 0.165 254.624);
+  --map-label: oklch(100% 0 0);
+  --map-label-hover: oklch(100% 0 0);
+  --map-label-selected: oklch(100% 0 0);
 }
+
+/* 50: 'oklch(96.79% 0.022 67.56)',
+   100: 'oklch(93.86% 0.044 68.35)',
+   200: 'oklch(87.82% 0.088 66.27)',
+   300: 'oklch(82.41% 0.129 64.69)',
+   400: 'oklch(77.37% 0.163 60.28)',
+   500: 'oklch(73.19% 0.186 52.98)',
+   600: 'oklch(62.01% 0.156 53.46)',
+   700: 'oklch(50.29% 0.126 54.25)',
+   800: 'oklch(38.04% 0.092 56.80)',
+   900: 'oklch(24.71% 0.056 63.84)',
+   950: 'oklch(17.36% 0.037 72.03)', */
 
 .dark {
   --background: oklch(0.1776 0 0);
@@ -124,11 +155,11 @@
   --input: oklch(0.4017 0 0);
   --ring: oklch(0.9247 0.0524 66.1732);
   --chart-1: oklch(0.9247 0.0524 66.1732);
-  --chart-2: oklch(0.3163 0.0190 63.6992);
-  --chart-3: oklch(0.2850 0 0);
-  --chart-4: oklch(0.3481 0.0219 67.0001);
-  --chart-5: oklch(0.9245 0.0533 67.0855);
-  --sidebar: oklch(0.2103 0.0059 285.8852);
+  --chart-2: oklch(0.8847 0.0724 60.1732);
+  --chart-3: oklch(0.8447 0.0924 54.1732);
+  --chart-4: oklch(0.8047 0.1124 48.1732);
+  --chart-5: oklch(0.7647 0.1324 42.1732);
+  --sidebar: oklch(0.7203 0.1559 285.8852);
   --sidebar-foreground: oklch(0.9674 0.0013 286.3752);
   --sidebar-primary: oklch(0.4882 0.2172 264.3763);
   --sidebar-primary-foreground: oklch(1.0000 0 0);
@@ -140,8 +171,18 @@
   --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   --radius: 0.625rem;
-}
 
+  --map-region: oklch(0.2520 0 0);
+  --map-region-hover: oklch(0.2520 0 0);
+  --map-region-selected: oklch(0.2520 0 0);
+  --map-region-disabled: oklch(0.2134 0 0);
+  --map-region-stroke: oklch(0.2134 0 0);
+  --map-region-stroke-hover: oklch(0.2134 0 0);
+  --map-region-focus-ring: oklch(0.2134 0 0);
+  --map-label: oklch(0.9491 0 0);
+  --map-label-hover: oklch(0.9491 0 0);
+  --map-label-selected: oklch(0.9491 0 0);
+}
 
 /* 
 @layer base {

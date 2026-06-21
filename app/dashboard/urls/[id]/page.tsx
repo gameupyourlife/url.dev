@@ -39,6 +39,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 import { UrlDetailsClient } from "./UrlDetailsClient";
+import CountryChart from "@/components/dashboard/url/CountryChart";
+import { RegionId } from "@/components/shadcnmaps/maps/world";
 
 
 export default async function UrlAnalyticsPage({
@@ -78,7 +80,7 @@ export default async function UrlAnalyticsPage({
         redirect("/dashboard/urls");
     }
 
-    const shortUrl = `url.dev/s/${advancedData.slug}`;
+    const shortUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/s/${advancedData.slug}`;
 
     return (
         <div className="container mx-auto flex flex-col gap-6 py-4">
@@ -204,6 +206,8 @@ export default async function UrlAnalyticsPage({
                 <TrafficQualityChart data={advancedData.analytics.botTraffic} />
                 <TrafficTypeChart data={advancedData.analytics.trafficType} />
             </div>
+
+            <CountryChart data={advancedData.analytics.clicksByCountry.concat({ country: "DE" as RegionId, clicks: 10 }) as { country: RegionId; clicks: number }[]} />
 
             {/* Link Info */}
             <div className="bg-card rounded-xl p-6">

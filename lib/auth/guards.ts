@@ -3,7 +3,6 @@ import { auth, Session } from "../auth";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { CREEM_FEATURE_PLANS, CreemFeature, CreemPlan, CreemPlans } from "./plan-access";
-import { checkSubscriptionAccess } from "@creem_io/better-auth";
 
 /**
  * Custom error thrown when API key validation fails
@@ -335,16 +334,15 @@ function verifyFeatureFlags(featureFlags: string[] | undefined): boolean {
 }
 
 function resolvePlanByProductId(productId: string): CreemPlan {
-
     // Loop over every CreemPlan slug and check for a matching environment variable with the provided productId
-    CreemPlans.forEach((plan: CreemPlan) => {
-        const envVarName = `CREEM_PRODUCT_${plan.toUpperCase()}`;
+    for (const plan of CreemPlans) {
+        const envVarName = `NEXT_PUBLIC_CREEM_PRODUCT_${plan.toUpperCase()}`;
         if (process.env[envVarName] === productId) {
-            return plan as CreemPlan;
+            return plan;
         } else if (process.env[envVarName] === undefined) {
             console.warn(`Environment variable ${envVarName} is not set. Please set it to the corresponding Creem product ID for the ${plan} plan.`);
         }
-    });
+    }
 
     return "free";
 }
@@ -367,7 +365,7 @@ async function verifyPlanAccess(
 
     const now = new Date();
 
-    const subscription = await db.query.creem_subscription.findFirst({
+    let subscription = await db.query.creem_subscription.findFirst({
         where: (creemSubscription, { and, gte, inArray, isNull, or }) =>
             and(
                 inArray(creemSubscription.referenceId, referenceIds),
@@ -377,8 +375,20 @@ async function verifyPlanAccess(
         orderBy: (creemSubscription, { desc }) => [desc(creemSubscription.periodEnd)],
     });
 
+    // No subscription eaquls free plan access
     if (!subscription) {
-        return planAccess.allowNoSubscription === true;
+        subscription = {
+            id: process.env.NEXT_PUBLIC_CREEM_PRODUCT_FREE || "free_plan_placeholder",
+            productId: process.env.NEXT_PUBLIC_CREEM_PRODUCT_FREE || "free_plan_placeholder",
+            status: "active",
+            referenceId: session.user.id,
+            periodEnd: null,
+            cancelAtPeriodEnd: false,
+            creemCustomerId: null,
+            creemOrderId: null,
+            creemSubscriptionId: null,
+            periodStart: new Date(),
+        };
     }
 
     const requiredProductIds = planAccess.productIds ?? [];
