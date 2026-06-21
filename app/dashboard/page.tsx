@@ -89,7 +89,7 @@ export default async function DashboardPage() {
                                     </span>
                                     <span className="font-semibold">{metrics.totalUrls}</span>
                                 </div>
-                                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                                {/* <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                                     <span className="text-sm text-muted-foreground">
                                         Clicks this month
                                     </span>
@@ -100,7 +100,7 @@ export default async function DashboardPage() {
                                         Clicks today
                                     </span>
                                     <span className="font-semibold">{metrics.todayClicks ?? "-"}</span>
-                                </div>
+                                </div> */}
                             </div>
                             <Button variant="outline" size="sm" className="w-full" asChild>
                                 <Link href="/dashboard/urls">

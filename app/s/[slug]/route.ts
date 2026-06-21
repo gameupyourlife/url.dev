@@ -1,15 +1,23 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { shortUrl, click } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq, lt, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
+import { timingSafeEqual } from "node:crypto";
 import {
     extractAnalyticsDataWithCountry,
     parseReferer,
-    getDeviceCategory,
 } from "@/lib/analytics";
 import { resolveRedirectForCountry } from "@/lib/redirects";
 import { ShortUrl } from "@/lib/db/types";
+
+type AccessErrorReason =
+    | "not-found"
+    | "inactive"
+    | "expired"
+    | "limit"
+    | "password-required"
+    | "password-invalid";
 
 export async function GET(
     req: NextRequest,
@@ -24,43 +32,27 @@ export async function GET(
         });
 
         if (!url) {
-            return NextResponse.json(
-                { error: "URL not found" },
-                { status: 404 }
-            );
+            return accessError(req, slug, "not-found", "URL not found", 404);
         }
 
-        // Check if URL is active
-        if (!url.isActive) {
-            return NextResponse.json(
-                { error: "This URL has been deactivated" },
-                { status: 410 }
-            );
+        const blockedResponse = getAccessRestrictionResponse(req, slug, url);
+        if (blockedResponse) {
+            return blockedResponse;
         }
 
-        // Check if URL has expired
-        if (url.expiresAt && new Date(url.expiresAt) < new Date()) {
-            return NextResponse.json(
-                { error: "This URL has expired" },
-                { status: 410 }
-            );
+        // Reserve click slot atomically so click limits remain correct under load.
+        const reserved = await reserveClickSlot(url);
+        if (!reserved) {
+            return accessError(req, slug, "limit", "This URL has reached its maximum click limit", 410);
         }
 
-        // Check if max clicks reached
-        if (url.maxClicks && url.clickCount >= url.maxClicks) {
-            return NextResponse.json(
-                { error: "This URL has reached its maximum click limit" },
-                { status: 410 }
-            );
-        }
-
-        // Extract comprehensive analytics data with country lookup
-        const analytics = await recordUrlAnalytics(req, slug, url);
+        const requestCountry = getRequestCountryCode(req);
 
         // Resolve country-specific redirect target (if configured in metadata)
-        const { target: resolvedTarget, matchedRule } = resolveRedirectForCountry(url.originalUrl, url.metadata, analytics.country?.code || analytics.cfCountry || undefined);
+        const { target: resolvedTarget, matchedRule } = resolveRedirectForCountry(url.originalUrl, url.metadata, requestCountry);
 
-        let searchParams = new URLSearchParams(analytics.searchParams || {});
+        const searchParams = new URLSearchParams(req.nextUrl.searchParams);
+        searchParams.delete("password");
 
         // Add utm parameters to the resolved target if they exist
         url.utmCampaign && searchParams.set("utm_campaign", url.utmCampaign);
@@ -73,8 +65,16 @@ export async function GET(
         const redirectTarget = resolvedTarget.startsWith("/") ? new URL(resolvedTarget, url.originalUrl).toString() : resolvedTarget;
 
         if (matchedRule) {
-            console.log(`Country redirect applied for slug=${slug} country=${analytics.country?.code || analytics.cfCountry} => target=${redirectTarget}`);
+            console.log(`Country redirect applied for slug=${slug} country=${requestCountry} => target=${redirectTarget}`);
         }
+
+        after(async () => {
+            try {
+                await collectUrlAnalytics(req, slug, url.id);
+            } catch (error) {
+                console.error(`Analytics collection failed for slug=${slug}:`, error);
+            }
+        });
 
         const urlObj = new URL(redirectTarget);
         urlObj.search = searchParams.toString();
@@ -89,7 +89,104 @@ export async function GET(
     }
 }
 
-async function recordUrlAnalytics(req: NextRequest, slug: string, url: ShortUrl) {
+function isHtmlRequest(req: NextRequest) {
+    const accept = req.headers.get("accept") || "";
+    return accept.includes("text/html");
+}
+
+function accessPageUrl(req: NextRequest, slug: string, reason: AccessErrorReason) {
+    const url = req.nextUrl.clone();
+    url.pathname = `/s/${encodeURIComponent(slug)}/access`;
+    url.search = "";
+    url.searchParams.set("reason", reason);
+    return url;
+}
+
+function accessError(
+    req: NextRequest,
+    slug: string,
+    reason: AccessErrorReason,
+    message: string,
+    status: number,
+) {
+    if (isHtmlRequest(req)) {
+        return NextResponse.redirect(accessPageUrl(req, slug, reason), 302);
+    }
+
+    return NextResponse.json({ error: message }, { status });
+}
+
+function getRequestPassword(req: NextRequest) {
+    return req.nextUrl.searchParams.get("password") || req.headers.get("x-url-password") || undefined;
+}
+
+function getRequestCountryCode(req: NextRequest) {
+    const candidate = req.headers.get("cf-ipcountry") || req.headers.get("x-vercel-ip-country") || req.headers.get("x-country-code");
+
+    if (!candidate) {
+        return undefined;
+    }
+
+    const normalized = candidate.trim().toUpperCase();
+    return /^[A-Z]{2}$/.test(normalized) ? normalized : undefined;
+}
+
+function passwordsMatch(expected: string, actual: string) {
+    const expectedBuffer = Buffer.from(expected);
+    const actualBuffer = Buffer.from(actual);
+
+    if (expectedBuffer.length !== actualBuffer.length) {
+        return false;
+    }
+
+    return timingSafeEqual(expectedBuffer, actualBuffer);
+}
+
+function getAccessRestrictionResponse(req: NextRequest, slug: string, url: ShortUrl) {
+    if (!url.isActive) {
+        return accessError(req, slug, "inactive", "This URL has been deactivated", 410);
+    }
+
+    if (url.expiresAt && new Date(url.expiresAt) < new Date()) {
+        return accessError(req, slug, "expired", "This URL has expired", 410);
+    }
+
+    if (typeof url.maxClicks === "number" && url.clickCount >= url.maxClicks) {
+        return accessError(req, slug, "limit", "This URL has reached its maximum click limit", 410);
+    }
+
+    if (url.password) {
+        const suppliedPassword = getRequestPassword(req);
+        if (!suppliedPassword) {
+            return accessError(req, slug, "password-required", "Password required", 401);
+        }
+
+        if (!passwordsMatch(url.password, suppliedPassword)) {
+            return accessError(req, slug, "password-invalid", "Password invalid", 401);
+        }
+    }
+
+    return null;
+}
+
+async function reserveClickSlot(url: ShortUrl) {
+    const maxClickUpdateWhere = typeof url.maxClicks === "number"
+        ? and(eq(shortUrl.id, url.id), lt(shortUrl.clickCount, url.maxClicks))
+        : eq(shortUrl.id, url.id);
+
+    const updatedRows = await db
+        .update(shortUrl)
+        .set({
+            clickCount: sql`${shortUrl.clickCount} + 1`,
+            lastClickedAt: new Date(),
+        })
+        .where(maxClickUpdateWhere)
+        .returning({ id: shortUrl.id });
+
+    return updatedRows.length > 0;
+}
+
+async function collectUrlAnalytics(req: NextRequest, slug: string, shortUrlId: string) {
     const analytics = await extractAnalyticsDataWithCountry(req, slug);
     const refererInfo = parseReferer(analytics.referer);
     const urlObj = new URL(req.url);
@@ -99,13 +196,10 @@ async function recordUrlAnalytics(req: NextRequest, slug: string, url: ShortUrl)
     const utmMedium = urlObj.searchParams.get("utm_medium");
     const utmCampaign = urlObj.searchParams.get("utm_campaign");
 
-    // Record analytics and increment click count atomically using a transaction
-    db.transaction(async (tx) => {
-        // Insert comprehensive analytics record
-        await tx.insert(click).values({
-            id: nanoid(),
-            shortUrlId: url.id,
-            shortCode: slug,
+    // Insert analytics as a best-effort background operation.
+    await db.insert(click).values({
+        id: nanoid(),
+        shortUrlId,
 
             // Request info
             ipAddress: analytics.ip !== "unknown" ? analytics.ip : null,
@@ -164,18 +258,7 @@ async function recordUrlAnalytics(req: NextRequest, slug: string, url: ShortUrl)
             // UTM parameters
             utmSource: utmSource || null,
             utmMedium: utmMedium || null,
-            utmCampaign: utmCampaign || null,
-        });
-
-        // Increment click count and update last clicked timestamp
-        await tx
-            .update(shortUrl)
-            .set({
-                clickCount: url.clickCount + 1,
-                lastClickedAt: new Date(),
-            })
-            .where(eq(shortUrl.id, url.id));
+        utmCampaign: utmCampaign || null,
     });
-    return analytics;
 }
 

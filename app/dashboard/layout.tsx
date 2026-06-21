@@ -56,7 +56,6 @@ export default async function Layout({
                         >
                             <DashboardTabsClient
                                 session={session}
-                                activeOrganization={activeOrganization}
                                 organizations={usersOrganizations}
                             />
                         </Tabs>

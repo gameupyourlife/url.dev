@@ -222,8 +222,6 @@ export async function getShortUrlsPaginated({ page = 1, pageSize = 25, search, s
     const session = await isAuthenticated({ behavior: "error", permissions: { shortUrl: ["read"] } });
     const orgId = session.session.activeOrganizationId;
 
-    console.log("orgId:", orgId);
-
     const whereClauses: any[] = [];
     if (orgId) whereClauses.push(eq(shortUrl.organizationId, orgId));
     else whereClauses.push(eq(shortUrl.userId, session.user.id));
