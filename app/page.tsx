@@ -246,14 +246,63 @@ export default function Page() {
   const [url, setUrl] = useState("");
   const [shortened, setShortened] = useState("");
   const [copied, setCopied] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [signupRequired, setSignupRequired] = useState(false);
   const [activeTab, setActiveTab] = useState<keyof typeof codeExamples>("curl");
 
-  const handleShorten = () => {
-    if (url) setShortened(`${process.env.NEXT_PUBLIC_BASE_URL}/${Math.random().toString(36).substring(2, 8)}`);
+  const handleShorten = async () => {
+    const trimmedUrl = url.trim();
+    if (!trimmedUrl || isSubmitting || signupRequired) return;
+
+    setIsSubmitting(true);
+    setErrorMessage("");
+
+    try {
+      const res = await fetch("/api/public/shorten", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: trimmedUrl }),
+      });
+
+      const data = (await res.json().catch(() => null)) as
+        | {
+            shortUrl?: string;
+            error?: string;
+            code?: string;
+            requiresSignup?: boolean;
+          }
+        | null;
+
+      if (!res.ok) {
+        setErrorMessage(data?.error || "Could not shorten this URL. Please try again.");
+        if (data?.code === "signup_required") {
+          setSignupRequired(true);
+        }
+        return;
+      }
+
+      if (!data?.shortUrl) {
+        setErrorMessage("Unexpected response from server.");
+        return;
+      }
+
+      setShortened(data.shortUrl);
+      setUrl("");
+      setCopied(false);
+      if (data.requiresSignup) {
+        setSignupRequired(true);
+      }
+    } catch {
+      setErrorMessage("Network error while shortening URL. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const copyToClipboard = () => {
-    navigator.clipboard.writeText(`${process.env.NEXT_PUBLIC_BASE_URL}/${shortened}`);
+    if (!shortened) return;
+    navigator.clipboard.writeText(shortened);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -379,18 +428,28 @@ data = res.json()`,
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleShorten()}
+                disabled={isSubmitting || signupRequired}
                 className="h-11 flex-1 border-none bg-transparent shadow-none focus-visible:ring-0"
               />
-              <Button size="lg" onClick={handleShorten} className="h-11 px-6">
+              <Button
+                size="lg"
+                onClick={handleShorten}
+                disabled={isSubmitting || signupRequired}
+                className="h-11 px-6"
+              >
                 <Zap className="mr-1 h-4 w-4" />
-                Shorten
+                {isSubmitting ? "Shortening..." : signupRequired ? "Limit reached" : "Shorten"}
               </Button>
             </div>
+
+            {errorMessage && errorMessage != "You have reached the quick-create limit. Sign up to create more links." && (
+              <p className="mt-3 text-sm text-destructive">{errorMessage}</p>
+            )}
 
             {shortened && (
               <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 animate-in fade-in slide-in-from-bottom-2">
                 <span className="truncate font-mono text-sm font-semibold text-primary">
-                  https://{shortened}
+                  {shortened}
                 </span>
                 <Button variant="outline" size="sm" onClick={copyToClipboard} className="shrink-0">
                   {copied ? (
@@ -405,8 +464,22 @@ data = res.json()`,
                 </Button>
               </div>
             )}
+
+            {signupRequired && (
+              <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-card px-4 py-3 text-left">
+                <p className="text-sm text-muted-foreground">
+                  You have used your free quick link. Create an account to keep shortening and track analytics.
+                </p>
+                <Link href="/signup" className="shrink-0">
+                  <Button size="sm">
+                    Sign up free
+                    <ArrowRight className="ml-1 h-4 w-4" />
+                  </Button>
+                </Link>
+              </div>
+            )}
             <p className="mt-3 text-xs text-muted-foreground">
-              No signup required · 1,000 free links / month
+              Try one link instantly, then sign up for unlimited creation.
             </p>
           </div>
 
