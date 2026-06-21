@@ -86,6 +86,8 @@ interface FullOrganization extends Organization {
 
 export default function SettingsClient() {
     const { data: session, isPending: sessionLoading } = authClient.useSession();
+    const { data: selectedOrg, isPending: isLoadingActiveOrganization, refetch: refetchActiveOrg } = authClient.useActiveOrganization()
+    const { data: organizations } = authClient.useListOrganizations();
     const { theme, setTheme } = useTheme();
 
     // Profile state
@@ -99,9 +101,6 @@ export default function SettingsClient() {
     const [isChangingPassword, setIsChangingPassword] = useState(false);
 
     // Organizations state
-    const [organizations, setOrganizations] = useState<Organization[]>([]);
-    const [selectedOrg, setSelectedOrg] = useState<FullOrganization | null>(null);
-    const [isLoadingOrgs, setIsLoadingOrgs] = useState(true);
     const [activeTab, setActiveTab] = useState("profile");
 
     // Initialize name when session loads
@@ -110,30 +109,6 @@ export default function SettingsClient() {
             setName(session.user.name);
         }
     }, [session?.user?.name]);
-
-    // Fetch organizations
-    const fetchOrganizations = useCallback(async () => {
-        try {
-            const orgs = await listOrganizations();
-            setOrganizations((orgs as Organization[]) || []);
-
-            // If user has an active org, fetch its details
-            if (session?.session?.activeOrganizationId) {
-                const fullOrg = await getOrganization(session.session.activeOrganizationId);
-                setSelectedOrg(fullOrg as FullOrganization);
-            }
-        } catch (error) {
-            console.error("Failed to fetch organizations:", error);
-        } finally {
-            setIsLoadingOrgs(false);
-        }
-    }, [session?.session?.activeOrganizationId]);
-
-    useEffect(() => {
-        if (!sessionLoading) {
-            fetchOrganizations();
-        }
-    }, [sessionLoading, fetchOrganizations]);
 
     async function handleUpdateProfile() {
         if (!name.trim()) {
@@ -182,21 +157,6 @@ export default function SettingsClient() {
         }
     }
 
-    async function handleSelectOrg(orgId: string | null) {
-        try {
-            await setActiveOrganization(orgId);
-            if (orgId) {
-                const fullOrg = await getOrganization(orgId);
-                setSelectedOrg(fullOrg as FullOrganization);
-            } else {
-                setSelectedOrg(null);
-            }
-            toast.success(orgId ? "Organization switched" : "Switched to personal account");
-        } catch (error: any) {
-            toast.error(error?.message || "Failed to switch organization");
-        }
-    }
-
     if (sessionLoading) {
         return (
             <div className="flex items-center justify-center min-h-[400px]">
@@ -218,41 +178,6 @@ export default function SettingsClient() {
                         Manage your account, organizations, and preferences
                     </p>
                 </div>
-
-                {/* Organization Switcher */}
-                {organizations.length > 0 && (
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="outline" className="gap-2">
-                                <Building2 className="h-4 w-4" />
-                                {selectedOrg ? selectedOrg.name : "Personal Account"}
-                                <ChevronDown className="h-4 w-4 opacity-50" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-[220px]">
-                            <DropdownMenuLabel>Switch context</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => handleSelectOrg(null)}>
-                                <User className="h-4 w-4 mr-2" />
-                                Personal Account
-                                {!selectedOrg && <Check className="h-4 w-4 ml-auto" />}
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            {organizations.map((org) => (
-                                <DropdownMenuItem
-                                    key={org.id}
-                                    onClick={() => handleSelectOrg(org.id)}
-                                >
-                                    <Building2 className="h-4 w-4 mr-2" />
-                                    {org.name}
-                                    {selectedOrg?.id === org.id && (
-                                        <Check className="h-4 w-4 ml-auto" />
-                                    )}
-                                </DropdownMenuItem>
-                            ))}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                )}
             </div>
 
             {/* Settings Tabs */}
@@ -479,7 +404,7 @@ export default function SettingsClient() {
 
                 {/* Organizations Tab */}
                 <TabsContent value="organizations" className="space-y-6">
-                    {isLoadingOrgs ? (
+                    {isLoadingActiveOrganization ? (
                         <div className="flex items-center justify-center py-12">
                             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                         </div>
@@ -487,19 +412,19 @@ export default function SettingsClient() {
                         <OrganizationSettings
                             organization={selectedOrg}
                             currentUserId={session?.user?.id || ""}
-                            onRefresh={fetchOrganizations}
+                            onRefresh={() => refetchActiveOrg()}
                         />
                     ) : (
                         <div className="space-y-6">
                             {/* No Organization Selected */}
-                            {organizations.length > 0 ? (
+                            {organizations && organizations.length > 0 ? (
                                 <Card className="p-6">
                                     <div className="text-center py-8">
-                                        <Building2 className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
+                                        <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
                                         <p className="text-muted-foreground mb-4">
                                             Select an organization from the dropdown above to manage it.
                                         </p>
-                                        <div className="flex flex-wrap justify-center gap-2">
+                                        {/* <div className="flex flex-wrap justify-center gap-2">
                                             {organizations.map((org) => (
                                                 <Button
                                                     key={org.id}
@@ -510,13 +435,13 @@ export default function SettingsClient() {
                                                     {org.name}
                                                 </Button>
                                             ))}
-                                        </div>
+                                        </div> */}
                                     </div>
                                 </Card>
                             ) : null}
 
                             {/* Create Organization */}
-                            <CreateOrganizationCard onCreated={fetchOrganizations} />
+                            <CreateOrganizationCard onCreated={() => console.log("Organization created")} />
                         </div>
                     )}
                 </TabsContent>

@@ -45,26 +45,28 @@ const navItems = [
         icon: List,
         matchExact: false,
     },
+    {
+        href: "/dashboard/create",
+        label: "Create",
+        icon: Plus,
+        matchExact: false,
+    }
 ];
 
 export function DashboardTabsClient({
     session,
-    activeOrganization,
     organizations,
 }: {
     session: Session;
-    activeOrganization: ActiveOrganization | null;
     organizations: Organization[];
 }) {
     const pathname = usePathname();
-    const [activeOrg, setActiveOrg] = useState<ActiveOrganization | null>(
-        activeOrganization,
-    );
+    const { data: activeOrg, isPending: isLoadingActiveOrganization, refetch: refetchActiveOrg } = authClient.useActiveOrganization()
 
     async function handleSwitchOrg(orgId: string | null) {
         try {
             const org = await setActiveOrganization(orgId);
-            setActiveOrg(org);
+            refetchActiveOrg();
 
             if (org) {
                 toast.success(`Switched to ${org.name}`);
@@ -101,7 +103,7 @@ export function DashboardTabsClient({
                             "gap-1.5 px-2 sm:px-3",
                             active
                                 ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                                : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground",
+                                : "bg-card text-muted-foreground hover:bg-muted hover:text-foreground",
                         )}
                         asChild
                     >
@@ -114,34 +116,14 @@ export function DashboardTabsClient({
                     </Button>
                 );
             })}
-
-            {/* Create URL Button */}
-            <Button
-                size="lg"
-                className={cn(
-                    "gap-1.5 px-2 sm:px-3",
-                    pathname === "/dashboard/create"
-                        ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                        : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground",
-                    // ? "bg-primary text-primary-foreground"
-                    // : "bg-primary/10 text-primary hover:bg-primary/20",
-                )}
-                asChild
-            >
-                <Link href="/dashboard/create">
-                    <Plus className="h-4 w-4" />
-                    <span className="hidden sm:inline">New Link</span>
-                </Link>
-            </Button>
-
             {organizations.length > 0 && (
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <div className="flex items-center relative">
+                <div className="relative flex items-center bg-card rounded-lg">
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
                             <Button
                                 variant="ghost"
                                 size="lg"
-                                className="gap-1.5 bg-muted/60 hover:bg-muted px-2 sm:px-3 pr-10  relative"
+                                className="gap-1.5 bg-card hover:bg-muted px-2 sm:px-3 pr-12"
                             >
                                 <div className="h-6 w-6 rounded bg-primary/10 flex items-center justify-center">
                                     {activeOrg ? (
@@ -150,66 +132,72 @@ export function DashboardTabsClient({
                                         <User className="h-3.5 w-3.5 text-muted-foreground" />
                                     )}
                                 </div>
-                                <span className="hidden sm:inline max-w-[120px] truncate">
+                                <span className="hidden sm:inline max-w-30 truncate">
                                     {activeOrg?.name || "Personal"}
                                 </span>
-                                <ChevronDown className="h-3.5 w-3.5 opacity-50 mr-10" />
+                                <ChevronDown className="h-3.5 w-3.5 opacity-50" />
                             </Button>
-                            <div
-                                className="absolute right-0 z-10"
-                                onMouseEnter={(e) => e.stopPropagation()}
-                                onMouseLeave={(e) => e.stopPropagation()}
-                            >
-                                <UserNav
-                                    user={{
-                                        name: session?.user?.name,
-                                        email: session?.user?.email,
-                                        image:
-                                            session?.user?.image ?? undefined,
-                                    }}
-                                    isNavigatedTo={pathname.startsWith(
-                                        "/dashboard/settings",
-                                    )}
-                                />
-                            </div>
-                        </div>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent
-                        align="start"
-                        className="w-[200px]"
-                    >
-                        <DropdownMenuLabel className="text-xs text-muted-foreground">
-                            Switch workspace
-                        </DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => handleSwitchOrg(null)}>
-                            <User className="h-4 w-4 mr-2" />
-                            Personal
-                            {!activeOrg && (
-                                <Check className="h-4 w-4 ml-auto" />
-                            )}
-                        </DropdownMenuItem>
-                        {organizations.map((org) => (
-                            <DropdownMenuItem
-                                key={org.id}
-                                onClick={() => handleSwitchOrg(org.id)}
-                            >
-                                <Building2 className="h-4 w-4 mr-2" />
-                                <span className="truncate">{org.name}</span>
-                                {activeOrg?.id === org.id && (
-                                    <Check className="h-4 w-4 ml-auto flex-shrink-0" />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                            align="start"
+                            className="w-50"
+                        >
+                            <DropdownMenuLabel className="text-xs text-muted-foreground">
+                                Switch workspace
+                            </DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => handleSwitchOrg(null)}>
+                                <User className="h-4 w-4 mr-2" />
+                                Personal
+                                {!activeOrg && (
+                                    <Check className="h-4 w-4 ml-auto" />
                                 )}
                             </DropdownMenuItem>
-                        ))}
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem asChild>
-                            <Link href="/dashboard/settings?tab=organizations">
-                                <Plus className="h-4 w-4 mr-2" />
-                                Create Organization
-                            </Link>
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                            {organizations.map((org) => (
+                                <DropdownMenuItem
+                                    key={org.id}
+                                    onClick={() => handleSwitchOrg(org.id)}
+                                >
+                                    <Building2 className="h-4 w-4 mr-2" />
+                                    <span className="truncate">{org.name}</span>
+                                    {activeOrg?.id === org.id && (
+                                        <Check className="h-4 w-4 ml-auto shrink-0" />
+                                    )}
+                                </DropdownMenuItem>
+                            ))}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem asChild>
+                                <Link href="/dashboard/settings?tab=organizations">
+                                    <Plus className="h-4 w-4 mr-2" />
+                                    Create Organization
+                                </Link>
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    <UserNav
+                        user={{
+                            name: session?.user?.name,
+                            email: session?.user?.email,
+                            image: session?.user?.image ?? undefined,
+                        }}
+                        isNavigatedTo={pathname.startsWith("/dashboard/settings")}
+                        className="border border-border/60 bg-background/80 backdrop-blur-sm"
+                    />
+                    {/* <div className="absolute right-1 top-1/2 -translate-y-1/2 z-10">
+                    </div> */}
+                </div>
+            )}
+
+            {organizations.length === 0 && (
+                <UserNav
+                    user={{
+                        name: session?.user?.name,
+                        email: session?.user?.email,
+                        image: session?.user?.image ?? undefined,
+                    }}
+                    isNavigatedTo={pathname.startsWith("/dashboard/settings")}
+                />
             )}
         </TabsList>
     );

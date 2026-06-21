@@ -422,7 +422,8 @@ function CountryRedirectsBuilder({
     }
 
     function insertExample() {
-        setRules([
+        setRules((current) => [
+            ...current,
             { countries: ["US"], target: "https://us.example.com" },
             { countries: ["CA"], target: "https://ca.example.com" },
             { countries: ["*"], target: "https://example.com" },

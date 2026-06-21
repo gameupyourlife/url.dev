@@ -93,13 +93,13 @@ export default async function DashboardPage() {
                                     <span className="text-sm text-muted-foreground">
                                         Clicks this month
                                     </span>
-                                    <span className="font-semibold">{metrics.monthlyClicks}</span>
+                                    <span className="font-semibold">{metrics.monthlyClicks ?? "-"}</span>
                                 </div>
                                 <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                                     <span className="text-sm text-muted-foreground">
                                         Clicks today
                                     </span>
-                                    <span className="font-semibold">{metrics.todayClicks}</span>
+                                    <span className="font-semibold">{metrics.todayClicks ?? "-"}</span>
                                 </div>
                             </div>
                             <Button variant="outline" size="sm" className="w-full" asChild>

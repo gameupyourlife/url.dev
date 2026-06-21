@@ -3,7 +3,7 @@ import { isAuthenticated } from "@/lib/auth/guards";
 import { db } from "@/lib/db";
 import { click, shortUrl } from "@/lib/db/schema";
 import { NewShortUrl, ShortUrl, UrlWithAnalytics, UrlWithClicks } from "@/lib/db/types";
-import { and, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 export async function getShortUrls(): Promise<ShortUrl[]> {
@@ -222,6 +222,8 @@ export async function getShortUrlsPaginated({ page = 1, pageSize = 25, search, s
     const session = await isAuthenticated({ behavior: "error", permissions: { shortUrl: ["read"] } });
     const orgId = session.session.activeOrganizationId;
 
+    console.log("orgId:", orgId);
+
     const whereClauses: any[] = [];
     if (orgId) whereClauses.push(eq(shortUrl.organizationId, orgId));
     else whereClauses.push(eq(shortUrl.userId, session.user.id));
@@ -245,7 +247,20 @@ export async function getShortUrlsPaginated({ page = 1, pageSize = 25, search, s
     else if (sortBy === 'clickCount') orderExpr = shortUrl.clickCount;
     else if (sortBy === 'updatedAt') orderExpr = shortUrl.updatedAt;
 
-    const rows = await db.select().from(shortUrl).where(and(...whereClauses)).orderBy(sortDir === 'asc' ? orderExpr.asc() : orderExpr.desc()).limit(pageSize).offset((page - 1) * pageSize);
+
+    const rows = await db.select().from(shortUrl).where(and(...whereClauses)).orderBy(sortDir === 'asc' ? asc(orderExpr) : desc(orderExpr)).limit(pageSize).offset((page - 1) * pageSize);
 
     return { data: rows, total, page, pageSize };
+}
+
+export async function toggleShortUrlActiveState(id: string) {
+    const session = await isAuthenticated({ behavior: "error", permissions: { shortUrl: ["write"] } });
+    const result = await db.update(shortUrl).set({ isActive: sql`NOT is_active` }).where(and(
+        eq(shortUrl.id, id),
+        session.session.activeOrganizationId ?
+            eq(shortUrl.organizationId, session.session.activeOrganizationId)
+            :
+            eq(shortUrl.userId, session.user.id)
+    )).returning();
+    return result[0];
 }

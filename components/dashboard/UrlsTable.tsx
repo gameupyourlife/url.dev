@@ -43,6 +43,7 @@ import {
     X,
 } from "lucide-react";
 import { Card, CardContent, CardFooter, CardHeader } from "../ui/card";
+import { authClient } from "@/lib/auth/auth-client";
 
 export default function UrlsTable({
     initialUrls,
@@ -61,6 +62,8 @@ export default function UrlsTable({
     const [sortDir, setSortDir] = React.useState<"asc" | "desc">("desc");
     const [isActiveFilter, setIsActiveFilter] = React.useState<string>("all");
     const [loading, setLoading] = React.useState(false);
+
+    const { data: activeOrganization } = authClient.useActiveOrganization();
 
     const toggleSort = (column: "createdAt" | "clickCount" | "slug") => {
         if (sortBy === column) {
@@ -245,7 +248,7 @@ export default function UrlsTable({
         } finally {
             setLoading(false);
         }
-    }, [page, pageSize, debouncedSearch, sortBy, sortDir, isActiveFilter]);
+    }, [page, pageSize, debouncedSearch, sortBy, sortDir, isActiveFilter, activeOrganization]);
 
     React.useEffect(() => {
         fetchData();
@@ -260,7 +263,7 @@ export default function UrlsTable({
     // Reset page on filter changes
     React.useEffect(() => {
         setPage(1);
-    }, [debouncedSearch, pageSize, isActiveFilter]);
+    }, [debouncedSearch, pageSize, isActiveFilter, activeOrganization]);
 
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
     const hasFilters = search || isActiveFilter !== "all";

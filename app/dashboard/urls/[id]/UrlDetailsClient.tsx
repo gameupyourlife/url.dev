@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { deleteShortUrl } from "@/app/actions/short-urls";
+import { deleteShortUrl, toggleShortUrlActiveState, updateShortUrl } from "@/app/actions/short-urls";
 import {
     QrCode,
     Pencil,
@@ -14,6 +14,7 @@ import {
     Loader2,
     Download,
     Share2,
+    Check,
 } from "lucide-react";
 import {
     DropdownMenu,
@@ -32,6 +33,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { db } from "@/lib/db";
 
 interface UrlDetailsClientProps {
     urlId: string;
@@ -74,6 +76,15 @@ export function UrlDetailsClient({ urlId, slug }: UrlDetailsClientProps) {
         }
     }
 
+    async function handleToggleActive() {
+        toast.promise(toggleShortUrlActiveState(urlId),
+            {
+                loading: "Toggling active state...",
+                success: "Active state toggled",
+                error: "Failed to toggle active state",
+            })
+    }
+
     function downloadQrCode() {
         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(shortUrl)}`;
         const link = document.createElement("a");
@@ -108,6 +119,10 @@ export function UrlDetailsClient({ urlId, slug }: UrlDetailsClientProps) {
                                 <Pencil className="h-4 w-4 mr-2" />
                                 Edit URL
                             </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleToggleActive}>
+                            <Check className="h-4 w-4 mr-2" />
+                            Toggle active state
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
