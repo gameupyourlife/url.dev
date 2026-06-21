@@ -733,9 +733,8 @@ data = res.json()`,
             ].map((tier) => (
               <div
                 key={tier.name}
-                className={`relative flex flex-col rounded-3xl border bg-card p-7 ${
-                  tier.featured ? "border-primary ring-1 ring-primary" : "border-border/60"
-                }`}
+                className={`relative flex flex-col rounded-3xl border bg-card p-7 ${tier.featured ? "border-primary ring-1 ring-primary" : "border-border/60"
+                  }`}
               >
                 {tier.featured && (
                   <Badge className="absolute right-6 top-6">Most popular</Badge>

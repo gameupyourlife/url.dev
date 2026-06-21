@@ -45,7 +45,7 @@ export default function RootLayout({
                 >
                     {/* Global Banner that this is currently in development and only a preview */}
                     <div>
-                        <div className="bg-primary text-primary-foreground text-center text-sm py-1 flex items-center justify-center gap-2">
+                        <div className="bg-primary text-primary-foreground text-center text-sm py-1 flex items-center justify-center gap-2 z-100">
                             This is a preview of url.dev v2, currently in development. Expect bugs and missing features. Payment is not required nor possible. Please{" "}
                             <a
                                 href="https://github.com/gameupyourlife/url.dev/issues"
