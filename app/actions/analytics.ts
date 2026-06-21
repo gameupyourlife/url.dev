@@ -9,8 +9,8 @@ import { and, eq, sql, desc } from "drizzle-orm";
 /**
  * Get total clicks for a specific URL
  */
-export async function getTotalClicks({ urlId }: { urlId: string }) {
-    const session = await isAuthenticated({ behavior: "error", permissions: { shortUrl: ["read", "analytics"] } });
+export async function getTotalClicks({ urlId, apiKey }: { urlId: string; apiKey?: string }) {
+    const session = await isAuthenticated({ behavior: "error", apiKey, permissions: { shortUrl: ["read", "analytics"] } });
     if (!urlId) throw new Error("urlId required");
     const res = await db.select({ total: sql`coalesce(sum(${click.id} IS NOT NULL::int), 0)` })
         .from(click)
@@ -21,8 +21,8 @@ export async function getTotalClicks({ urlId }: { urlId: string }) {
 /**
  * Get unique visitors for a specific URL (by unique IP address)
  */
-export async function getUniqueVisitors({ urlId }: { urlId: string }) {
-    const session = await isAuthenticated({ behavior: "error", permissions: { shortUrl: ["read", "analytics"] } });
+export async function getUniqueVisitors({ urlId, apiKey }: { urlId: string; apiKey?: string }) {
+    const session = await isAuthenticated({ behavior: "error", apiKey, permissions: { shortUrl: ["read", "analytics"] } });
     if (!urlId) throw new Error("urlId required");
     const res = await db.select({ total: sql`coalesce(count(distinct ${click.ipAddress}), 0)` })
         .from(click)
@@ -33,8 +33,8 @@ export async function getUniqueVisitors({ urlId }: { urlId: string }) {
 /**
  * Get the top country for a specific URL
  */
-export async function getTopCountry({ urlId }: { urlId: string }) {
-    const session = await isAuthenticated({ behavior: "error", permissions: { shortUrl: ["read", "analytics"] } });
+export async function getTopCountry({ urlId, apiKey }: { urlId: string; apiKey?: string }) {
+    const session = await isAuthenticated({ behavior: "error", apiKey, permissions: { shortUrl: ["read", "analytics"] } });
     if (!urlId) throw new Error("urlId required");
     const res = await db.select({ country: click.countryName, clicks: sql`count(*)` })
         .from(click)
@@ -48,8 +48,8 @@ export async function getTopCountry({ urlId }: { urlId: string }) {
 /**
  * Get device diversity (number of unique device types) for a specific URL
  */
-export async function getDeviceDiversity({ urlId }: { urlId: string }) {
-    const session = await isAuthenticated({ behavior: "error", permissions: { shortUrl: ["read", "analytics"] } });
+export async function getDeviceDiversity({ urlId, apiKey }: { urlId: string; apiKey?: string }) {
+    const session = await isAuthenticated({ behavior: "error", apiKey, permissions: { shortUrl: ["read", "analytics"] } });
     if (!urlId) throw new Error("urlId required");
     const res = await db.select({ total: sql`coalesce(count(distinct ${click.deviceType}), 0)` })
         .from(click)
@@ -59,8 +59,8 @@ export async function getDeviceDiversity({ urlId }: { urlId: string }) {
 
 
 
-export async function getOverviewMetrics() {
-    const session = await isAuthenticated({ behavior: "error", permissions: { shortUrl: ["read", "analytics"] } });
+export async function getOverviewMetrics({ apiKey }: { apiKey?: string } = {}) {
+    const session = await isAuthenticated({ behavior: "error", apiKey, permissions: { shortUrl: ["read", "analytics"] } });
 
     const orgId = session.session.activeOrganizationId;
 
@@ -83,8 +83,8 @@ export async function getOverviewMetrics() {
     return { totalUrls, totalClicks, totalUsers };
 }
 
-export async function getDailyClicks({ urlId, days = 30 }: { urlId?: string; days?: number } = {}) {
-    const session = await isAuthenticated({ behavior: "error", permissions: { shortUrl: ["read", "analytics"] } });
+export async function getDailyClicks({ urlId, days = 30, apiKey }: { urlId?: string; days?: number; apiKey?: string } = {}) {
+    const session = await isAuthenticated({ behavior: "error", apiKey, permissions: { shortUrl: ["read", "analytics"] } });
     const orgId = session.session.activeOrganizationId;
 
     const startDate = new Date(Date.now() - (days * 24 * 60 * 60 * 1000));
@@ -124,8 +124,8 @@ export async function getDailyClicks({ urlId, days = 30 }: { urlId?: string; day
     return result;
 }
 
-export async function getTopUrls({ limit = 10 }: { limit?: number } = {}) {
-    const session = await isAuthenticated({ behavior: "error", permissions: { shortUrl: ["read", "analytics"] } });
+export async function getTopUrls({ limit = 10, apiKey }: { limit?: number; apiKey?: string } = {}) {
+    const session = await isAuthenticated({ behavior: "error", apiKey, permissions: { shortUrl: ["read", "analytics"] } });
     const orgId = session.session.activeOrganizationId;
 
     const q = db.select().from(shortUrl).where(
@@ -136,8 +136,8 @@ export async function getTopUrls({ limit = 10 }: { limit?: number } = {}) {
     return rows;
 }
 
-export async function getTopCountries({ urlId, limit = 10 }: { urlId?: string; limit?: number } = {}) {
-    const session = await isAuthenticated({ behavior: "error", permissions: { shortUrl: ["read", "analytics"] } });
+export async function getTopCountries({ urlId, limit = 10, apiKey }: { urlId?: string; limit?: number; apiKey?: string } = {}) {
+    const session = await isAuthenticated({ behavior: "error", apiKey, permissions: { shortUrl: ["read", "analytics"] } });
     const orgId = session.session.activeOrganizationId;
 
     const base = db.select({ country: click.countryName, clicks: sql`count(*)` })
@@ -153,8 +153,8 @@ export async function getTopCountries({ urlId, limit = 10 }: { urlId?: string; l
     return rows.map((r: any) => ({ country: r.country ?? "(unknown)", clicks: Number(r.clicks) }));
 }
 
-export async function getTopReferrers({ urlId, limit = 10 }: { urlId?: string; limit?: number } = {}) {
-    const session = await isAuthenticated({ behavior: "error", permissions: { shortUrl: ["read", "analytics"] } });
+export async function getTopReferrers({ urlId, limit = 10, apiKey }: { urlId?: string; limit?: number; apiKey?: string } = {}) {
+    const session = await isAuthenticated({ behavior: "error", apiKey, permissions: { shortUrl: ["read", "analytics"] } });
     const orgId = session.session.activeOrganizationId;
 
     const base = db.select({ referer: click.refererDomain, type: click.refererType, clicks: sql`count(*)` })
@@ -170,8 +170,8 @@ export async function getTopReferrers({ urlId, limit = 10 }: { urlId?: string; l
     return rows.map((r: any) => ({ referer: r.referer ?? "(unknown)", type: r.type ?? "unknown", clicks: Number(r.clicks) }));
 }
 
-export async function getDeviceBreakdown({ urlId, limit = 20 }: { urlId?: string; limit?: number } = {}) {
-    const session = await isAuthenticated({ behavior: "error", permissions: { shortUrl: ["read", "analytics"] } });
+export async function getDeviceBreakdown({ urlId, limit = 20, apiKey }: { urlId?: string; limit?: number; apiKey?: string } = {}) {
+    const session = await isAuthenticated({ behavior: "error", apiKey, permissions: { shortUrl: ["read", "analytics"] } });
     const orgId = session.session.activeOrganizationId;
 
     const base = db.select({ device: click.deviceType, clicks: sql`count(*)` })
@@ -187,8 +187,8 @@ export async function getDeviceBreakdown({ urlId, limit = 20 }: { urlId?: string
     return rows.map((r: any) => ({ device: r.device ?? "(unknown)", clicks: Number(r.clicks) }));
 }
 
-export async function getBrowserBreakdown({ urlId, limit = 20 }: { urlId?: string; limit?: number } = {}) {
-    const session = await isAuthenticated({ behavior: "error", permissions: { shortUrl: ["read", "analytics"] } });
+export async function getBrowserBreakdown({ urlId, limit = 20, apiKey }: { urlId?: string; limit?: number; apiKey?: string } = {}) {
+    const session = await isAuthenticated({ behavior: "error", apiKey, permissions: { shortUrl: ["read", "analytics"] } });
     const orgId = session.session.activeOrganizationId;
 
     const base = db.select({ browser: click.browserName, clicks: sql`count(*)` })
@@ -204,15 +204,16 @@ export async function getBrowserBreakdown({ urlId, limit = 20 }: { urlId?: strin
     return rows.map((r: any) => ({ browser: r.browser ?? "(unknown)", clicks: Number(r.clicks) }));
 }
 
-export async function exportClicksCsv({ urlId, startDate, endDate, country, device, limit = 10000 }: {
+export async function exportClicksCsv({ urlId, startDate, endDate, country, device, limit = 10000, apiKey }: {
     urlId?: string;
     startDate?: Date;
     endDate?: Date;
     country?: string;
     device?: string;
     limit?: number;
+    apiKey?: string;
 }) {
-    const session = await isAuthenticated({ behavior: "error", permissions: { shortUrl: ["read", "analytics"] } });
+    const session = await isAuthenticated({ behavior: "error", apiKey, permissions: { shortUrl: ["read", "analytics"] } });
     const orgId = session.session.activeOrganizationId;
 
     const whereClauses: any[] = [];
@@ -251,7 +252,7 @@ export async function exportClicksCsv({ urlId, startDate, endDate, country, devi
     return csvLines.join("\n");
 }
 
-export async function getClicksPaginated({ urlId, page = 1, pageSize = 50, startDate, endDate, country, device }: {
+export async function getClicksPaginated({ urlId, page = 1, pageSize = 50, startDate, endDate, country, device, apiKey }: {
     urlId?: string;
     page?: number;
     pageSize?: number;
@@ -259,8 +260,9 @@ export async function getClicksPaginated({ urlId, page = 1, pageSize = 50, start
     endDate?: Date;
     country?: string;
     device?: string;
+    apiKey?: string;
 }) {
-    const session = await isAuthenticated({ behavior: "error", permissions: { shortUrl: ["read", "analytics"] } });
+    const session = await isAuthenticated({ behavior: "error", apiKey, permissions: { shortUrl: ["read", "analytics"] } });
     const orgId = session.session.activeOrganizationId;
 
     const whereClauses: any[] = [];

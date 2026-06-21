@@ -6,8 +6,8 @@ import { NewShortUrl, ShortUrl, UrlWithAnalytics, UrlWithClicks } from "@/lib/db
 import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
-export async function getShortUrls(): Promise<ShortUrl[]> {
-    const session = await isAuthenticated({ behavior: "error", permissions: { shortUrl: ["read"] } });
+export async function getShortUrls({ apiKey }: { apiKey?: string } = {}): Promise<ShortUrl[]> {
+    const session = await isAuthenticated({ behavior: "error", apiKey, permissions: { shortUrl: ["read"] } });
 
     const results = await db.select().from(shortUrl).where(
         session.session.activeOrganizationId ?
@@ -20,8 +20,8 @@ export async function getShortUrls(): Promise<ShortUrl[]> {
     return results;
 }
 
-export async function getShortUrlById(id: string): Promise<UrlWithClicks | null> {
-    const session = await isAuthenticated({ behavior: "error", permissions: { shortUrl: ["read", "analytics"] } });
+export async function getShortUrlById(id: string, { apiKey }: { apiKey?: string } = {}): Promise<UrlWithClicks | null> {
+    const session = await isAuthenticated({ behavior: "error", apiKey, permissions: { shortUrl: ["read", "analytics"] } });
 
     const urlResult = await db.select().from(shortUrl).where(
         and(
@@ -48,8 +48,8 @@ export async function getShortUrlById(id: string): Promise<UrlWithClicks | null>
     return urlWithClicks || null;
 }
 
-export async function getShortUrlByIdWithAnalytics(id: string): Promise<UrlWithAnalytics | null> {
-    const session = await isAuthenticated({ behavior: "error", permissions: { shortUrl: ["read", "analytics"] } });
+export async function getShortUrlByIdWithAnalytics(id: string, { apiKey }: { apiKey?: string } = {}): Promise<UrlWithAnalytics | null> {
+    const session = await isAuthenticated({ behavior: "error", apiKey, permissions: { shortUrl: ["read", "analytics"] } });
 
     const urlResult = await db.select().from(shortUrl).where(
         and(
@@ -158,8 +158,8 @@ export async function getShortUrlByIdWithAnalytics(id: string): Promise<UrlWithA
     return urlWithAnalytics || null;
 }
 
-export async function upsertShortUrl(url: (Omit<NewShortUrl, "id"> | ShortUrl)) {
-    const session = await isAuthenticated({ behavior: "error", permissions: { shortUrl: ["write"] } });
+export async function upsertShortUrl(url: (Omit<NewShortUrl, "id"> | ShortUrl), { apiKey }: { apiKey?: string } = {}) {
+    const session = await isAuthenticated({ behavior: "error", apiKey, permissions: { shortUrl: ["write"] } });
 
     const result = await db.insert(shortUrl).values({
         ...url,
@@ -178,8 +178,8 @@ export async function upsertShortUrl(url: (Omit<NewShortUrl, "id"> | ShortUrl)) 
     return result[0];
 }
 
-export async function deleteShortUrl(id: string) {
-    const session = await isAuthenticated({ behavior: "error", permissions: { shortUrl: ["delete"] } });
+export async function deleteShortUrl(id: string, { apiKey }: { apiKey?: string } = {}) {
+    const session = await isAuthenticated({ behavior: "error", apiKey, permissions: { shortUrl: ["delete"] } });
 
     await db.delete(shortUrl).where(and(
         eq(shortUrl.id, id),
@@ -190,8 +190,8 @@ export async function deleteShortUrl(id: string) {
     ));
 }
 
-export async function updateShortUrl(id: string, data: { url?: string; slug?: string; title?: string; isActive?: boolean }) {
-    const session = await isAuthenticated({ behavior: "error", permissions: { shortUrl: ["write"] } });
+export async function updateShortUrl(id: string, data: { url?: string; slug?: string; title?: string; isActive?: boolean }, { apiKey }: { apiKey?: string } = {}) {
+    const session = await isAuthenticated({ behavior: "error", apiKey, permissions: { shortUrl: ["write"] } });
 
     const updateData: any = {};
     if (data.url !== undefined) updateData.originalUrl = data.url;
@@ -211,15 +211,16 @@ export async function updateShortUrl(id: string, data: { url?: string; slug?: st
     return result[0];
 }
 
-export async function getShortUrlsPaginated({ page = 1, pageSize = 25, search, sortBy = 'createdAt', sortDir = 'desc', isActive }: {
+export async function getShortUrlsPaginated({ page = 1, pageSize = 25, search, sortBy = 'createdAt', sortDir = 'desc', isActive, apiKey }: {
     page?: number;
     pageSize?: number;
     search?: string;
     sortBy?: string;
     sortDir?: 'asc' | 'desc';
     isActive?: boolean | undefined;
+    apiKey?: string;
 }) {
-    const session = await isAuthenticated({ behavior: "error", permissions: { shortUrl: ["read"] } });
+    const session = await isAuthenticated({ behavior: "error", apiKey, permissions: { shortUrl: ["read"] } });
     const orgId = session.session.activeOrganizationId;
 
     const whereClauses: any[] = [];
@@ -251,8 +252,8 @@ export async function getShortUrlsPaginated({ page = 1, pageSize = 25, search, s
     return { data: rows, total, page, pageSize };
 }
 
-export async function toggleShortUrlActiveState(id: string) {
-    const session = await isAuthenticated({ behavior: "error", permissions: { shortUrl: ["write"] } });
+export async function toggleShortUrlActiveState(id: string, { apiKey }: { apiKey?: string } = {}) {
+    const session = await isAuthenticated({ behavior: "error", apiKey, permissions: { shortUrl: ["write"] } });
     const result = await db.update(shortUrl).set({ isActive: sql`NOT is_active` }).where(and(
         eq(shortUrl.id, id),
         session.session.activeOrganizationId ?
