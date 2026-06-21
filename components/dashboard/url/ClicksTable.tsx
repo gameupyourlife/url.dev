@@ -18,7 +18,7 @@ export default function ClicksTable({ urlId }: { urlId: string }) {
             setLoading(true);
             try {
                 const params = new URLSearchParams({ type: "clicks", urlId, page: String(page), pageSize: String(pageSize) });
-                const res = await fetch(`/api/analytics?${params.toString()}`);
+                const res = await fetch(`/api/v1/analytics?${params.toString()}`);
                 const json = await res.json();
                 if (!cancelled) {
                     setData(json.data || []);
@@ -36,7 +36,7 @@ export default function ClicksTable({ urlId }: { urlId: string }) {
 
     const handleExport = () => {
         const params = new URLSearchParams({ type: "exportClicks", urlId });
-        window.location.href = `/api/analytics?${params.toString()}`;
+        window.location.href = `/api/v1/analytics?${params.toString()}`;
     };
 
     return (
