@@ -14,6 +14,12 @@ export const auth = betterAuth({
         schema
     }),
 
+    user: {
+        deleteUser: {
+            enabled: true
+        }
+    },
+
     emailAndPassword: {
         enabled: true,
 

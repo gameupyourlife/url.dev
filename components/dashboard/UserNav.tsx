@@ -13,6 +13,9 @@ import {
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useTheme } from "next-themes";
+import { authClient } from "@/lib/auth/auth-client";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 export function UserNav({
     user,
@@ -25,6 +28,7 @@ export function UserNav({
 }) {
     const [open, setOpen] = useState(false);
     const theme = useTheme();
+    const router = useRouter();
 
     return (
         <DropdownMenu
@@ -89,17 +93,18 @@ export function UserNav({
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                    <form
-                        action="/api/auth/signout"
-                        method="post"
-                    >
-                        <button
-                            type="submit"
-                            className="w-full text-left"
-                        >
-                            Sign out
-                        </button>
-                    </form>
+                    <button className="w-full text-left" onClick={() => authClient.signOut({
+                        fetchOptions: {
+                            onSuccess: () => {
+                                router.push("/"); // redirect to login page
+                            },
+                            onError: () => {
+                                toast.error("Error signing out");
+                            }
+                        },
+                    })} >
+                        Sign out
+                    </button>
                 </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>
