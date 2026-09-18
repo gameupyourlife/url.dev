@@ -177,7 +177,12 @@ async function authenticateWithApiKey(
 
     if (!verificationResult.valid) {
         if (behavior === "error") {
-            throw new InvalidApiKeyError(verificationResult.error?.message);
+            const errorMessage =
+                typeof verificationResult.error?.message === "string"
+                    ? verificationResult.error.message
+                    : undefined;
+
+            throw new InvalidApiKeyError(errorMessage);
         }
         return null;
     }
