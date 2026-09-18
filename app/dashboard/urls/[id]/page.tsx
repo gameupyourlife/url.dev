@@ -1,10 +1,8 @@
 import { isAuthenticated } from "@/lib/auth/guards";
-import { getShortUrlByIdWithAnalytics, deleteShortUrl, updateShortUrl } from "@/app/actions/short-urls";
+import { getShortUrlByIdWithAnalytics } from "@/app/actions/short-urls";
 import { redirect } from "next/navigation";
-import { Suspense } from "react";
 import Link from "next/link";
 
-import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -23,20 +21,7 @@ import {
     Users,
     Clock,
     CalendarDays,
-    QrCode,
-    Pencil,
-    Trash2,
-    Copy,
-    Share2,
-    MoreHorizontal,
 } from "lucide-react";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 import { UrlDetailsClient } from "./UrlDetailsClient";
 import CountryChart from "@/components/dashboard/url/CountryChart";
@@ -207,7 +192,7 @@ export default async function UrlAnalyticsPage({
                 <TrafficTypeChart data={advancedData.analytics.trafficType} />
             </div>
 
-            <CountryChart data={advancedData.analytics.clicksByCountry.concat({ country: "DE" as RegionId, clicks: 10 }) as { country: RegionId; clicks: number }[]} />
+            <CountryChart countryData={advancedData.analytics.clicksByCountry.concat({ country: "DE" as RegionId, clicks: 10 }) as { country: RegionId; clicks: number }[]} />
 
             {/* Link Info */}
             <div className="bg-card rounded-xl p-6">
@@ -219,7 +204,7 @@ export default async function UrlAnalyticsPage({
                     </div>
                     <div className="space-y-1">
                         <p className="text-sm text-muted-foreground">Short URL</p>
-                        <p className="text-sm font-medium">https://{shortUrl}</p>
+                        <p className="text-sm font-medium"><Link href={shortUrl} target="_blank" rel="noopener noreferrer">{shortUrl}</Link></p>
                     </div>
                     <div className="space-y-1">
                         <p className="text-sm text-muted-foreground">Created</p>

@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Inter } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
-import { ModeToggle } from "@/components/mode-toggle";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
-import { Construction } from "lucide-react";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -45,8 +43,8 @@ export default function RootLayout({
                 >
                     {/* Global Banner that this is currently in development and only a preview */}
                     <div>
-                        <div className="bg-primary text-primary-foreground text-center text-sm py-1 flex items-center justify-center gap-2 z-100">
-                            This is a preview of url.dev v2, currently in development. Expect bugs and missing features. Payment is not required nor possible. Please{" "}
+                        <div className="bg-primary text-primary-foreground text-center text-sm py-1 flex items-center justify-center gap-1 z-100">
+                            This is a preview of url.dev v2, currently in development. Expect bugs and missing features. Payment is not required nor possible. All claims are void, invalid and purely fictional. Do not use this for any real-world applications. Please
                             <a
                                 href="https://github.com/gameupyourlife/url.dev/issues"
                                 className="underline"
@@ -54,7 +52,6 @@ export default function RootLayout({
                             >
                                 report any issues
                             </a>
-                            .
                         </div>
                     </div>
                     {children}
