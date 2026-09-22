@@ -1,6 +1,5 @@
 "use client";
-
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
@@ -8,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
     Field,
     FieldDescription,
@@ -26,68 +24,11 @@ import {
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth/auth-client";
 import { updateUser, changePassword } from "@/app/actions/user";
-import { listOrganizations, getOrganization, setActiveOrganization } from "@/app/actions/organizations";
-import {
-    OrganizationSettings,
-    CreateOrganizationCard,
-} from "@/components/dashboard/settings/OrganizationSettings";
-import { ApiKeysSettings } from "@/components/dashboard/settings/ApiKeysSettings";
-import { SessionsSettings } from "@/components/dashboard/settings/SessionsSettings";
-import {
-    User,
-    Building2,
-    Key,
-    Shield,
-    Settings,
-    Check,
-    Loader2,
-    ChevronDown,
-} from "lucide-react";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Loader2 } from "lucide-react";
 import { useTheme } from "next-themes";
-
-interface Organization {
-    id: string;
-    name: string;
-    slug: string;
-    logo?: string | null;
-    createdAt: Date;
-}
-
-interface FullOrganization extends Organization {
-    members: Array<{
-        id: string;
-        userId: string;
-        role: string;
-        createdAt: Date;
-        user: {
-            id: string;
-            name: string;
-            email: string;
-            image?: string | null;
-        };
-    }>;
-    invitations: Array<{
-        id: string;
-        email: string;
-        role: string | null;
-        status: string;
-        expiresAt: Date;
-        inviterId: string;
-    }>;
-}
 
 export default function SettingsClient() {
     const { data: session, isPending: sessionLoading } = authClient.useSession();
-    const { data: selectedOrg, isPending: isLoadingActiveOrganization, refetch: refetchActiveOrg } = authClient.useActiveOrganization()
-    const { data: organizations } = authClient.useListOrganizations();
     const { theme, setTheme } = useTheme();
 
     // Profile state
@@ -99,9 +40,6 @@ export default function SettingsClient() {
     const [newPassword, setNewPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [isChangingPassword, setIsChangingPassword] = useState(false);
-
-    // Organizations state
-    const [activeTab, setActiveTab] = useState("profile");
 
     // Initialize name when session loads
     useEffect(() => {
@@ -120,8 +58,8 @@ export default function SettingsClient() {
         try {
             await updateUser({ name });
             toast.success("Profile updated successfully");
-        } catch (error: any) {
-            toast.error(error?.message || "Failed to update profile");
+        } catch (error: unknown) {
+            toast.error(error instanceof Error ? error.message : "Failed to update profile");
         } finally {
             setIsUpdatingProfile(false);
         }
@@ -150,8 +88,8 @@ export default function SettingsClient() {
             setCurrentPassword("");
             setNewPassword("");
             setConfirmPassword("");
-        } catch (error: any) {
-            toast.error(error?.message || "Failed to change password");
+        } catch (error: unknown) {
+            toast.error(error instanceof Error ? error.message : "Failed to change password");
         } finally {
             setIsChangingPassword(false);
         }
@@ -159,7 +97,7 @@ export default function SettingsClient() {
 
     if (sessionLoading) {
         return (
-            <div className="flex items-center justify-center min-h-[400px]">
+            <div className="flex items-center justify-center min-h-100">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
         );
@@ -167,42 +105,7 @@ export default function SettingsClient() {
 
     return (
         <div className="space-y-6">
-            {/* Settings Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-                        <Settings className="h-6 w-6" />
-                        Settings
-                    </h1>
-                    <p className="text-muted-foreground mt-1">
-                        Manage your account, organizations, and preferences
-                    </p>
-                </div>
-            </div>
-
-            {/* Settings Tabs */}
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-                <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid">
-                    <TabsTrigger value="profile" className="gap-2">
-                        <User className="h-4 w-4" />
-                        <span className="hidden sm:inline">Profile</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="organizations" className="gap-2">
-                        <Building2 className="h-4 w-4" />
-                        <span className="hidden sm:inline">Organizations</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="api-keys" className="gap-2">
-                        <Key className="h-4 w-4" />
-                        <span className="hidden sm:inline">API Keys</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="security" className="gap-2">
-                        <Shield className="h-4 w-4" />
-                        <span className="hidden sm:inline">Security</span>
-                    </TabsTrigger>
-                </TabsList>
-
-                {/* Profile Tab */}
-                <TabsContent value="profile" className="space-y-6">
+            <div className="space-y-6">
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         {/* User Profile Card */}
                         <Card className="p-6">
@@ -400,62 +303,7 @@ export default function SettingsClient() {
                             </form>
                         </Card>
                     </div>
-                </TabsContent>
-
-                {/* Organizations Tab */}
-                <TabsContent value="organizations" className="space-y-6">
-                    {isLoadingActiveOrganization ? (
-                        <div className="flex items-center justify-center py-12">
-                            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                        </div>
-                    ) : selectedOrg ? (
-                        <OrganizationSettings
-                            organization={selectedOrg}
-                            currentUserId={session?.user?.id || ""}
-                            onRefresh={() => refetchActiveOrg()}
-                        />
-                    ) : (
-                        <div className="space-y-6">
-                            {/* No Organization Selected */}
-                            {organizations && organizations.length > 0 ? (
-                                <Card className="p-6">
-                                    <div className="text-center py-8">
-                                        <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
-                                        <p className="text-muted-foreground mb-4">
-                                            Select an organization from the dropdown above to manage it.
-                                        </p>
-                                        {/* <div className="flex flex-wrap justify-center gap-2">
-                                            {organizations.map((org) => (
-                                                <Button
-                                                    key={org.id}
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => handleSelectOrg(org.id)}
-                                                >
-                                                    {org.name}
-                                                </Button>
-                                            ))}
-                                        </div> */}
-                                    </div>
-                                </Card>
-                            ) : null}
-
-                            {/* Create Organization */}
-                            <CreateOrganizationCard onCreated={() => console.log("Organization created")} />
-                        </div>
-                    )}
-                </TabsContent>
-
-                {/* API Keys Tab */}
-                <TabsContent value="api-keys">
-                    <ApiKeysSettings />
-                </TabsContent>
-
-                {/* Security Tab */}
-                <TabsContent value="security" className="space-y-6">
-                    <SessionsSettings currentSessionToken={session?.session?.token} />
-                </TabsContent>
-            </Tabs>
+            </div>
         </div>
     );
 }

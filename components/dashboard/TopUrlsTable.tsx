@@ -29,7 +29,9 @@ export default async function TopUrlsTable() {
                         {rows.map((r) => (
                             <tr key={r.id} className="hover:bg-muted/30 transition-colors">
                                 <td className="py-2 max-w-[200px] truncate">
-                                    <span className="font-medium">{r.title || r.originalUrl}</span>
+                                    <Link href={`/dashboard/urls/${r.id}`} className="hover:underline">
+                                        <span className="font-medium">{r.title || r.originalUrl}</span>
+                                    </Link>
                                 </td>
                                 <td className="py-2">
                                     <Badge variant="outline">{r.slug}</Badge>

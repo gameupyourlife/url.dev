@@ -101,7 +101,7 @@ export default async function UrlAnalyticsPage({
                                 <code className="text-sm bg-muted px-2 py-1 rounded">
                                     {shortUrl}
                                 </code>
-                                <CopyButton value={`https://${shortUrl}`} />
+                                <CopyButton value={shortUrl} />
                                 <a
                                     href={`https://${shortUrl}`}
                                     target="_blank"
