@@ -5,6 +5,7 @@ import { click, shortUrl } from "@/lib/db/schema";
 import { NewShortUrl, ShortUrl, UrlWithAnalytics, UrlWithClicks } from "@/lib/db/types";
 import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
+import { captureServerEvent } from "@/lib/posthog-server";
 
 export async function getShortUrls({ apiKey }: { apiKey?: string } = {}): Promise<ShortUrl[]> {
     const session = await isAuthenticated({ behavior: "error", apiKey, permissions: { shortUrl: ["read"] } });
@@ -160,6 +161,7 @@ export async function getShortUrlByIdWithAnalytics(id: string, { apiKey }: { api
 
 export async function upsertShortUrl(url: (Omit<NewShortUrl, "id"> | ShortUrl), { apiKey }: { apiKey?: string } = {}) {
     const session = await isAuthenticated({ behavior: "error", apiKey, permissions: { shortUrl: ["write"] } });
+    const operation = 'id' in url ? "updated" : "created";
 
     const result = await db.insert(shortUrl).values({
         ...url,
@@ -175,6 +177,17 @@ export async function upsertShortUrl(url: (Omit<NewShortUrl, "id"> | ShortUrl), 
         },
     }).returning();
 
+    await captureServerEvent(session.user.id, "short_url_saved", {
+        operation,
+        workspace_type: session.session.activeOrganizationId ? "organization" : "personal",
+        api_key_used: Boolean(apiKey),
+        has_title: Boolean(url.title),
+        has_expiration: Boolean(url.expiresAt),
+        has_password: Boolean(url.password),
+        has_click_limit: Boolean(url.maxClicks),
+        has_utm_parameters: Boolean(url.utmSource || url.utmMedium || url.utmCampaign),
+    });
+
     return result[0];
 }
 
@@ -188,6 +201,11 @@ export async function deleteShortUrl(id: string, { apiKey }: { apiKey?: string }
             :
             eq(shortUrl.userId, session.user.id)
     ));
+
+    await captureServerEvent(session.user.id, "short_url_deleted", {
+        workspace_type: session.session.activeOrganizationId ? "organization" : "personal",
+        api_key_used: Boolean(apiKey),
+    });
 }
 
 export async function updateShortUrl(id: string, data: { url?: string; slug?: string; title?: string; isActive?: boolean }, { apiKey }: { apiKey?: string } = {}) {
@@ -261,5 +279,12 @@ export async function toggleShortUrlActiveState(id: string, { apiKey }: { apiKey
             :
             eq(shortUrl.userId, session.user.id)
     )).returning();
+
+    await captureServerEvent(session.user.id, "short_url_status_toggled", {
+        is_active: Boolean(result[0]?.isActive),
+        workspace_type: session.session.activeOrganizationId ? "organization" : "personal",
+        api_key_used: Boolean(apiKey),
+    });
+
     return result[0];
 }

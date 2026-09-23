@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { isAuthenticated } from "@/lib/auth/guards";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
+import { captureServerEvent } from "@/lib/posthog-server";
 
 export interface CreateApiKeyData {
     name: string;
@@ -26,6 +27,11 @@ export async function createApiKey(data: CreateApiKeyData) {
             expiresIn: data.expiresIn,
             permissions: data.permissions,
         },
+    });
+
+    await captureServerEvent(session.user.id, "api_key_created", {
+        has_expiration: Boolean(data.expiresIn),
+        has_custom_permissions: Boolean(data.permissions),
     });
 
     revalidatePath("/dashboard/settings");
@@ -61,6 +67,8 @@ export async function deleteApiKey(keyId: string) {
             keyId,
         },
     });
+
+    await captureServerEvent(session.user.id, "api_key_deleted");
 
     revalidatePath("/dashboard/settings");
     return result;

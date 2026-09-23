@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { authClient } from "@/lib/auth/auth-client";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import posthog from "posthog-js";
 
 export default function SignIn() {
     const [email, setEmail] = useState("");
@@ -92,7 +93,17 @@ export default function SignIn() {
                                     onError: (ctx) => {
                                         toast.error(ctx.error.message);
                                     },
-                                    onSuccess: () => {
+                                    onSuccess: async () => {
+                                        const { data: session } = await authClient.getSession();
+                                        if (process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN && session?.user.id) {
+                                            posthog.identify(session.user.id, {
+                                                email: session.user.email,
+                                                name: session.user.name,
+                                            });
+                                            posthog.capture("user_signed_in", {
+                                                authentication_method: "email",
+                                            });
+                                        }
                                         router.push("/dashboard");
                                     }
                                 },

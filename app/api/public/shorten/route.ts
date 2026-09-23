@@ -5,6 +5,7 @@ import { and, isNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { shortUrl } from "@/lib/db/schema";
 import { auth } from "@/lib/auth";
+import { captureServerEvent, captureServerException } from "@/lib/posthog-server";
 
 const ANON_CREATE_LIMIT = 1;
 const QUICK_CREATE_FINGERPRINT_KEY =
@@ -132,6 +133,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Failed to generate a unique short URL." }, { status: 500 });
     }
 
+    const distinctId = session?.user.id
+      ?? req.headers.get("x-posthog-distinct-id")
+      ?? fingerprint;
+    if (distinctId) {
+      await captureServerEvent(distinctId, "quick_short_url_created", {
+        is_anonymous: isAnonymous,
+        workspace_type: session?.session.activeOrganizationId ? "organization" : "personal",
+      });
+    }
+
     const shortLink = `${getBaseUrl(req)}/s/${created.slug}`;
     const response = NextResponse.json({
       id: created.id,
@@ -142,7 +153,9 @@ export async function POST(req: NextRequest) {
     });
 
     return response;
-  } catch {
+  } catch (error) {
+    const distinctId = req.headers.get("x-posthog-distinct-id") ?? getAnonymousFingerprint(req);
+    await captureServerException(error, distinctId);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

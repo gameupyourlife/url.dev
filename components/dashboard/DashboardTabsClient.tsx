@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { ActiveOrganization, Organization, Session } from "@/lib/auth";
+import posthog from "posthog-js";
 
 const navItems = [
     {
@@ -62,6 +63,15 @@ export function DashboardTabsClient({
 }) {
     const pathname = usePathname();
     const { data: activeOrg, isPending: isLoadingActiveOrganization, refetch: refetchActiveOrg } = authClient.useActiveOrganization()
+
+    useEffect(() => {
+        if (process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN && session.user.id) {
+            posthog.identify(session.user.id, {
+                email: session.user.email,
+                name: session.user.name,
+            });
+        }
+    }, [session.user.email, session.user.id, session.user.name]);
 
     async function handleSwitchOrg(orgId: string | null) {
         try {

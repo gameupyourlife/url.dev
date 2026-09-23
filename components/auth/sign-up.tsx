@@ -10,6 +10,7 @@ import { Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth/auth-client";
+import posthog from "posthog-js";
 
 export default function SignUp() {
     const [firstName, setFirstName] = useState("");
@@ -159,7 +160,18 @@ export default function SignUp() {
                                     onError: (ctx) => {
                                         toast.error(ctx.error.message);
                                     },
-                                    onSuccess: () => {
+                                    onSuccess: async () => {
+                                        const { data: session } = await authClient.getSession();
+                                        if (process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN && session?.user.id) {
+                                            posthog.identify(session.user.id, {
+                                                email: session.user.email,
+                                                name: session.user.name,
+                                            });
+                                            posthog.capture("user_signed_up", {
+                                                authentication_method: "email",
+                                                profile_image_added: Boolean(image),
+                                            });
+                                        }
                                         router.push("/dashboard");
                                     },
                                 },
