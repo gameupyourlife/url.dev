@@ -13,10 +13,34 @@ export interface UpdateUserData {
 export interface ChangePasswordData {
     currentPassword: string;
     newPassword: string;
+    revokeOtherSessions?: boolean;
+}
+
+export interface ChangeEmailData {
+    newEmail: string;
+    callbackURL?: string;
+}
+
+export interface SetPasswordData {
+    newPassword: string;
+}
+
+export interface DeleteAccountData {
+    password?: string;
+    callbackURL?: string;
+}
+
+export interface LinkedAccount {
+    id: string;
+    accountId: string;
+    providerId: string;
+    createdAt: Date;
+    updatedAt: Date;
+    scopes: string[];
 }
 
 export async function updateUser(data: UpdateUserData) {
-    const session = await isAuthenticated({ behavior: "error" });
+    await isAuthenticated({ behavior: "error" });
     
     const requestHeaders = await headers();
     
@@ -33,7 +57,7 @@ export async function updateUser(data: UpdateUserData) {
 }
 
 export async function changePassword(data: ChangePasswordData) {
-    const session = await isAuthenticated({ behavior: "error" });
+    await isAuthenticated({ behavior: "error" });
     
     const requestHeaders = await headers();
     
@@ -42,7 +66,7 @@ export async function changePassword(data: ChangePasswordData) {
         body: {
             currentPassword: data.currentPassword,
             newPassword: data.newPassword,
-            revokeOtherSessions: false,
+            revokeOtherSessions: data.revokeOtherSessions ?? false,
         },
     });
 
@@ -51,24 +75,72 @@ export async function changePassword(data: ChangePasswordData) {
 }
 
 export async function deleteAccount() {
-    const session = await isAuthenticated({ behavior: "error" });
-    
+    await isAuthenticated({ behavior: "error" });
+
     const requestHeaders = await headers();
-    
-    // Sign out first then delete
-    await auth.api.signOut({
+
+    const result = await auth.api.deleteUser({
         headers: requestHeaders,
+        body: {},
     });
-    
-    // Note: Account deletion would need additional implementation
-    // based on your specific requirements
-    
-    return { success: true };
+
+    revalidatePath("/");
+    return result;
+}
+
+export async function deleteAccountWithPassword(data: DeleteAccountData) {
+    await isAuthenticated({ behavior: "error" });
+
+    const requestHeaders = await headers();
+
+    const result = await auth.api.deleteUser({
+        headers: requestHeaders,
+        body: {
+            password: data.password,
+            callbackURL: data.callbackURL,
+        },
+    });
+
+    revalidatePath("/");
+    return result;
+}
+
+export async function changeEmail(data: ChangeEmailData) {
+    await isAuthenticated({ behavior: "error" });
+
+    const requestHeaders = await headers();
+
+    const result = await auth.api.changeEmail({
+        headers: requestHeaders,
+        body: {
+            newEmail: data.newEmail,
+            callbackURL: data.callbackURL,
+        },
+    });
+
+    revalidatePath("/dashboard/settings");
+    return result;
+}
+
+export async function setPassword(data: SetPasswordData) {
+    await isAuthenticated({ behavior: "error" });
+
+    const requestHeaders = await headers();
+
+    const result = await auth.api.setPassword({
+        headers: requestHeaders,
+        body: {
+            newPassword: data.newPassword,
+        },
+    });
+
+    revalidatePath("/dashboard/settings");
+    return result;
 }
 
 export async function listSessions() {
-    const session = await isAuthenticated({ behavior: "error" });
-    
+    await isAuthenticated({ behavior: "error" });
+
     const requestHeaders = await headers();
     
     const result = await auth.api.listSessions({
@@ -79,8 +151,8 @@ export async function listSessions() {
 }
 
 export async function revokeSession(sessionToken: string) {
-    const session = await isAuthenticated({ behavior: "error" });
-    
+    await isAuthenticated({ behavior: "error" });
+
     const requestHeaders = await headers();
     
     const result = await auth.api.revokeSession({
@@ -95,12 +167,54 @@ export async function revokeSession(sessionToken: string) {
 }
 
 export async function revokeAllSessions() {
-    const session = await isAuthenticated({ behavior: "error" });
-    
+    await isAuthenticated({ behavior: "error" });
+
     const requestHeaders = await headers();
     
     const result = await auth.api.revokeSessions({
         headers: requestHeaders,
+    });
+
+    revalidatePath("/dashboard/settings");
+    return result;
+}
+
+export async function revokeOtherSessions() {
+    await isAuthenticated({ behavior: "error" });
+
+    const requestHeaders = await headers();
+
+    const result = await auth.api.revokeOtherSessions({
+        headers: requestHeaders,
+    });
+
+    revalidatePath("/dashboard/settings");
+    return result;
+}
+
+export async function listLinkedAccounts() {
+    await isAuthenticated({ behavior: "error" });
+
+    const requestHeaders = await headers();
+
+    const result = await auth.api.listUserAccounts({
+        headers: requestHeaders,
+    });
+
+    return result as LinkedAccount[];
+}
+
+export async function unlinkAccount(providerId: string, accountId?: string) {
+    await isAuthenticated({ behavior: "error" });
+
+    const requestHeaders = await headers();
+
+    const result = await auth.api.unlinkAccount({
+        headers: requestHeaders,
+        body: {
+            providerId,
+            accountId,
+        },
     });
 
     revalidatePath("/dashboard/settings");

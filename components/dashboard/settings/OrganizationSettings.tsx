@@ -20,6 +20,8 @@ import {
     updateMemberRole,
     cancelInvitation,
     updateOrganization,
+    leaveOrganization,
+    deleteOrganization,
 } from "@/app/actions/organizations";
 import {
     Building2,
@@ -45,6 +47,17 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface OrganizationMember {
     id: string;
@@ -101,14 +114,23 @@ const roleConfig: Record<string, { icon: React.ReactNode; color: string; label: 
     },
 };
 
+function getErrorMessage(error: unknown, fallback: string): string {
+    if (error && typeof error === "object" && "message" in error && typeof error.message === "string") {
+        return error.message;
+    }
+    return fallback;
+}
+
 export function OrganizationSettings({
     organization,
     currentUserId,
     onRefresh,
+    onOrganizationLeftOrDeleted,
 }: {
     organization: OrganizationData;
     currentUserId: string;
     onRefresh: () => void;
+    onOrganizationLeftOrDeleted: () => void;
 }) {
     const [isEditing, setIsEditing] = useState(false);
     const [name, setName] = useState(organization.name);
@@ -118,6 +140,8 @@ export function OrganizationSettings({
     const [isInviting, setIsInviting] = useState(false);
     const [isUpdating, setIsUpdating] = useState(false);
     const [showInviteForm, setShowInviteForm] = useState(false);
+    const [isLeaving, setIsLeaving] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const currentMember = organization.members.find((m) => m.userId === currentUserId);
     const isOwner = currentMember?.role === "owner";
@@ -135,8 +159,8 @@ export function OrganizationSettings({
             toast.success("Organization updated");
             setIsEditing(false);
             onRefresh();
-        } catch (error: any) {
-            toast.error(error?.message || "Failed to update organization");
+        } catch (error: unknown) {
+            toast.error(getErrorMessage(error, "Failed to update organization"));
         } finally {
             setIsUpdating(false);
         }
@@ -158,8 +182,8 @@ export function OrganizationSettings({
             setInviteEmail("");
             setShowInviteForm(false);
             onRefresh();
-        } catch (error: any) {
-            toast.error(error?.message || "Failed to send invitation");
+        } catch (error: unknown) {
+            toast.error(getErrorMessage(error, "Failed to send invitation"));
         } finally {
             setIsInviting(false);
         }
@@ -174,8 +198,8 @@ export function OrganizationSettings({
             });
             toast.success("Member role updated");
             onRefresh();
-        } catch (error: any) {
-            toast.error(error?.message || "Failed to update member role");
+        } catch (error: unknown) {
+            toast.error(getErrorMessage(error, "Failed to update member role"));
         }
     }
 
@@ -184,8 +208,8 @@ export function OrganizationSettings({
             await removeMember(memberId, organization.id);
             toast.success("Member removed");
             onRefresh();
-        } catch (error: any) {
-            toast.error(error?.message || "Failed to remove member");
+        } catch (error: unknown) {
+            toast.error(getErrorMessage(error, "Failed to remove member"));
         }
     }
 
@@ -194,8 +218,34 @@ export function OrganizationSettings({
             await cancelInvitation(invitationId);
             toast.success("Invitation cancelled");
             onRefresh();
-        } catch (error: any) {
-            toast.error(error?.message || "Failed to cancel invitation");
+        } catch (error: unknown) {
+            toast.error(getErrorMessage(error, "Failed to cancel invitation"));
+        }
+    }
+
+    async function handleLeaveOrganization() {
+        setIsLeaving(true);
+        try {
+            await leaveOrganization(organization.id);
+            toast.success("You left the organization");
+            onOrganizationLeftOrDeleted();
+        } catch (error: unknown) {
+            toast.error(getErrorMessage(error, "Failed to leave organization"));
+        } finally {
+            setIsLeaving(false);
+        }
+    }
+
+    async function handleDeleteOrganization() {
+        setIsDeleting(true);
+        try {
+            await deleteOrganization(organization.id);
+            toast.success("Organization deleted");
+            onOrganizationLeftOrDeleted();
+        } catch (error: unknown) {
+            toast.error(getErrorMessage(error, "Failed to delete organization"));
+        } finally {
+            setIsDeleting(false);
         }
     }
 
@@ -300,7 +350,10 @@ export function OrganizationSettings({
                                 onChange={(e) => setInviteEmail(e.target.value)}
                                 className="flex-1 bg-background"
                             />
-                            <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as any)}>
+                            <Select
+                                value={inviteRole}
+                                onValueChange={(value: "member" | "admin" | "developer") => setInviteRole(value)}
+                            >
                                 <SelectTrigger className="w-full sm:w-36 bg-background">
                                     <SelectValue />
                                 </SelectTrigger>
@@ -438,6 +491,96 @@ export function OrganizationSettings({
                     })}
                 </div>
             </div>
+
+            {/* Danger Zone */}
+            <div className="bg-card rounded-xl p-6 border border-destructive/20">
+                <h3 className="font-semibold text-lg text-destructive mb-1">Danger Zone</h3>
+                <p className="text-sm text-muted-foreground mb-6">
+                    These actions are irreversible. Proceed carefully.
+                </p>
+
+                <div className="space-y-3">
+                    {!isOwner ? (
+                        <div className="rounded-lg border border-border/70 p-4 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+                            <div>
+                                <p className="font-medium">Leave Organization</p>
+                                <p className="text-sm text-muted-foreground">
+                                    Remove your access to this workspace.
+                                </p>
+                            </div>
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="destructive">Leave</Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Leave organization?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            You will lose access to this organization&apos;s links, analytics, and settings.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction
+                                            onClick={handleLeaveOrganization}
+                                            disabled={isLeaving}
+                                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                        >
+                                            {isLeaving ? (
+                                                <>
+                                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                    Leaving...
+                                                </>
+                                            ) : (
+                                                "Leave Organization"
+                                            )}
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        </div>
+                    ) : (
+                        <div className="rounded-lg border border-border/70 p-4 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+                            <div>
+                                <p className="font-medium">Delete Organization</p>
+                                <p className="text-sm text-muted-foreground">
+                                    Permanently remove this organization and all its team data.
+                                </p>
+                            </div>
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="destructive">Delete</Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Delete organization?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            This action cannot be undone. All members and invitations for this organization will be removed.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction
+                                            onClick={handleDeleteOrganization}
+                                            disabled={isDeleting}
+                                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                        >
+                                            {isDeleting ? (
+                                                <>
+                                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                    Deleting...
+                                                </>
+                                            ) : (
+                                                "Delete Organization"
+                                            )}
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        </div>
+                    )}
+                </div>
+            </div>
         </div>
     );
 }
@@ -462,8 +605,8 @@ export function CreateOrganizationCard({ onCreated }: { onCreated: () => void })
             setSlug("");
             setIsExpanded(false);
             onCreated();
-        } catch (error: any) {
-            toast.error(error?.message || "Failed to create organization");
+        } catch (error: unknown) {
+            toast.error(getErrorMessage(error, "Failed to create organization"));
         } finally {
             setIsCreating(false);
         }

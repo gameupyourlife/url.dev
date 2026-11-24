@@ -23,8 +23,24 @@ export interface UpdateMemberRoleData {
     organizationId: string;
 }
 
+export interface UserInvitation {
+    id: string;
+    email: string;
+    role: string | null;
+    status: string;
+    organizationId: string;
+    inviterId: string;
+    expiresAt: Date;
+    organization: {
+        id: string;
+        name: string;
+        slug: string;
+        logo?: string | null;
+    };
+}
+
 export async function createOrganization(data: CreateOrganizationData) {
-    const session = await isAuthenticated({ behavior: "error" });
+    await isAuthenticated({ behavior: "error" });
 
     const requestHeaders = await headers();
 
@@ -42,7 +58,7 @@ export async function createOrganization(data: CreateOrganizationData) {
 }
 
 export async function listOrganizations() {
-    const session = await isAuthenticated({ behavior: "error" });
+    await isAuthenticated({ behavior: "error" });
 
     const requestHeaders = await headers();
 
@@ -54,7 +70,7 @@ export async function listOrganizations() {
 }
 
 export async function getOrganization(organizationId: string) {
-    const session = await isAuthenticated({ behavior: "error" });
+    await isAuthenticated({ behavior: "error" });
 
     const requestHeaders = await headers();
 
@@ -69,7 +85,7 @@ export async function getOrganization(organizationId: string) {
 }
 
 export async function setActiveOrganization(organizationId: string | null) {
-    const session = await isAuthenticated({ behavior: "error" });
+    await isAuthenticated({ behavior: "error" });
 
     const requestHeaders = await headers();
 
@@ -88,7 +104,7 @@ export async function updateOrganization(
     organizationId: string,
     data: Partial<CreateOrganizationData>,
 ) {
-    const session = await isAuthenticated({ behavior: "error" });
+    await isAuthenticated({ behavior: "error" });
 
     const requestHeaders = await headers();
 
@@ -109,7 +125,7 @@ export async function updateOrganization(
 }
 
 export async function deleteOrganization(organizationId: string) {
-    const session = await isAuthenticated({ behavior: "error" });
+    await isAuthenticated({ behavior: "error" });
 
     const requestHeaders = await headers();
 
@@ -125,7 +141,7 @@ export async function deleteOrganization(organizationId: string) {
 }
 
 export async function inviteMember(data: InviteMemberData) {
-    const session = await isAuthenticated({ behavior: "error" });
+    await isAuthenticated({ behavior: "error" });
 
     const requestHeaders = await headers();
 
@@ -143,7 +159,7 @@ export async function inviteMember(data: InviteMemberData) {
 }
 
 export async function cancelInvitation(invitationId: string) {
-    const session = await isAuthenticated({ behavior: "error" });
+    await isAuthenticated({ behavior: "error" });
 
     const requestHeaders = await headers();
 
@@ -159,7 +175,7 @@ export async function cancelInvitation(invitationId: string) {
 }
 
 export async function acceptInvitation(invitationId: string) {
-    const session = await isAuthenticated({ behavior: "error" });
+    await isAuthenticated({ behavior: "error" });
 
     const requestHeaders = await headers();
 
@@ -175,7 +191,7 @@ export async function acceptInvitation(invitationId: string) {
 }
 
 export async function rejectInvitation(invitationId: string) {
-    const session = await isAuthenticated({ behavior: "error" });
+    await isAuthenticated({ behavior: "error" });
 
     const requestHeaders = await headers();
 
@@ -191,7 +207,7 @@ export async function rejectInvitation(invitationId: string) {
 }
 
 export async function updateMemberRole(data: UpdateMemberRoleData) {
-    const session = await isAuthenticated({ behavior: "error" });
+    await isAuthenticated({ behavior: "error" });
 
     const requestHeaders = await headers();
 
@@ -209,7 +225,7 @@ export async function updateMemberRole(data: UpdateMemberRoleData) {
 }
 
 export async function removeMember(memberId: string, organizationId: string) {
-    const session = await isAuthenticated({ behavior: "error" });
+    await isAuthenticated({ behavior: "error" });
 
     const requestHeaders = await headers();
 
@@ -226,11 +242,11 @@ export async function removeMember(memberId: string, organizationId: string) {
 }
 
 export async function leaveOrganization(organizationId: string) {
-    const session = await isAuthenticated({ behavior: "error" });
+    await isAuthenticated({ behavior: "error" });
 
     const requestHeaders = await headers();
 
-    // First set active organization to null
+    // Switch to personal workspace first to keep session context valid.
     await auth.api.setActiveOrganization({
         headers: requestHeaders,
         body: {
@@ -238,9 +254,25 @@ export async function leaveOrganization(organizationId: string) {
         },
     });
 
-    // Then leave the organization
-    // Note: This might need adjustment based on better-auth API
+    const result = await auth.api.leaveOrganization({
+        headers: requestHeaders,
+        body: {
+            organizationId,
+        },
+    });
 
     revalidatePath("/dashboard/settings");
-    return { success: true };
+    return result;
+}
+
+export async function listUserInvitations() {
+    await isAuthenticated({ behavior: "error" });
+
+    const requestHeaders = await headers();
+
+    const result = await auth.api.listUserInvitations({
+        headers: requestHeaders,
+    });
+
+    return result as UserInvitation[];
 }
