@@ -375,11 +375,8 @@ data = res.json()`,
 
             <div className="flex items-center gap-2">
               <Link href="/signin">
-                <Button variant="ghost">Sign in</Button>
-              </Link>
-              <Link href="/signup">
                 <Button>
-                  Get started
+                  Sign in
                   <ArrowRight className="ml-1 h-4 w-4" />
                 </Button>
               </Link>
@@ -470,7 +467,7 @@ data = res.json()`,
                 <p className="text-sm text-muted-foreground">
                   You have used your free quick link. Create an account to keep shortening and track analytics.
                 </p>
-                <Link href="/signup" className="shrink-0">
+                <Link href="/signin" className="shrink-0">
                   <Button size="sm">
                     Sign up free
                     <ArrowRight className="ml-1 h-4 w-4" />
@@ -825,7 +822,7 @@ data = res.json()`,
                     </li>
                   ))}
                 </ul>
-                <Link href="/signup" className="mt-8">
+                <Link href="/signin" className="mt-8">
                   <Button className="w-full" variant={tier.variant}>
                     {tier.cta}
                   </Button>
@@ -907,7 +904,7 @@ data = res.json()`,
                 card required.
               </p>
               <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-                <Link href="/signup">
+                <Link href="/signin">
                   <Button size="lg" variant="secondary" className="px-8">
                     Get started free
                     <ArrowRight className="ml-1 h-4 w-4" />

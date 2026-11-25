@@ -1,7 +1,5 @@
-import SignUp from "@/components/auth/sign-up";
+import { redirect } from "next/navigation";
 
-export default async function SignUpPage() {
-    return <div>
-        <SignUp />
-    </div>;
+export default function SignUpPage() {
+    redirect("/signin");
 }

@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { createApiKey, listApiKeys, deleteApiKey } from "@/app/actions/api-keys";
-import { Key, Plus, Trash2, AlertTriangle, Loader2, X, Check, Clock, Activity } from "lucide-react";
+import { Key, Plus, Trash2, AlertTriangle, Loader2, Check, Clock, Activity } from "lucide-react";
 import CopyButton from "@/components/ui/CopyButton";
 import {
     AlertDialog,
@@ -21,14 +21,29 @@ import {
 } from "@/components/ui/alert-dialog";
 
 interface ApiKey {
+    metadata: Record<string, any> | null;
+    permissions: {
+        [key: string]: string[];
+    } | null;
     id: string;
+    configId: string;
     name: string | null;
     start: string | null;
-    createdAt: Date;
-    expiresAt: Date | null;
-    enabled: boolean | null;
+    prefix: string | null;
+    referenceId: string;
+    refillInterval: number | null;
+    refillAmount: number | null;
+    lastRefillAt: Date | null;
+    enabled: boolean;
+    rateLimitEnabled: boolean;
+    rateLimitTimeWindow: number | null;
+    rateLimitMax: number | null;
+    requestCount: number;
+    remaining: number | null;
     lastRequest: Date | null;
-    requestCount: number | null;
+    expiresAt: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
 }
 
 export function ApiKeysSettings() {
@@ -42,7 +57,7 @@ export function ApiKeysSettings() {
     async function fetchApiKeys() {
         try {
             const keys = await listApiKeys();
-            setApiKeys((keys as ApiKey[]) || []);
+            setApiKeys((keys.apiKeys as ApiKey[]) || []);
         } catch (error) {
             console.error("Failed to fetch API keys:", error);
         } finally {

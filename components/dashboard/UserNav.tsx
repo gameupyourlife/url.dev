@@ -16,6 +16,7 @@ import { useTheme } from "next-themes";
 import { authClient } from "@/lib/auth/auth-client";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import posthog from "posthog-js";
 
 export function UserNav({
     user,
@@ -96,6 +97,10 @@ export function UserNav({
                     <button className="w-full text-left" onClick={() => authClient.signOut({
                         fetchOptions: {
                             onSuccess: () => {
+                                if (process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN) {
+                                    posthog.capture("user_signed_out");
+                                    posthog.reset();
+                                }
                                 router.push("/"); // redirect to login page
                             },
                             onError: () => {

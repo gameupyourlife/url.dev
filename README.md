@@ -1,5 +1,15 @@
-Update/Generate better-auth schema: npx @better-auth/cli generate --output ./lib/db/auth-schema.ts 
+Update/Generate better-auth schema: npx auth@latest generate --output ./lib/db/auth-schema.ts 
 Update database: npx drizzle-kit push
+
+## GameUp sign-in
+
+GameUp is the only sign-in provider. The first successful sign-in creates a url.dev account for a new user.
+
+1. In the GameUp Accounts **Applications** page, register a confidential client with the exact callback URL: `<BETTER_AUTH_URL>/api/auth/callback/gameup` (for example, `https://url.dev/api/auth/callback/gameup`). Use a separate registration and an HTTPS callback for each environment.
+2. Set `BETTER_AUTH_URL` to your public url.dev origin and set `GAMEUP_CLIENT_ID` and `GAMEUP_CLIENT_SECRET` on the server. Keep the client secret out of browser bundles and source control.
+3. Test the callback with a GameUp account before rolling out the change. GitHub client credentials are no longer used.
+
+Existing users are not automatically linked by email. Before rollout, link their verified GameUp OIDC subjects to their existing url.dev user IDs using a controlled migration (`account.providerId = "gameup"`, `account.accountId =` the verified GameUp `sub`). This preserves ownership of existing links and workspaces. Do not match accounts by email alone.
 
 ---
 

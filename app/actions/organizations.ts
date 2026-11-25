@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { isAuthenticated } from "@/lib/auth/guards";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
+import { captureServerEvent } from "@/lib/posthog-server";
 
 export interface CreateOrganizationData {
     name: string;
@@ -51,6 +52,10 @@ export async function createOrganization(data: CreateOrganizationData) {
             slug: data.slug,
             logo: data.logo,
         },
+    });
+
+    await captureServerEvent(session.user.id, "organization_created", {
+        has_logo: Boolean(data.logo),
     });
 
     revalidatePath("/dashboard/settings");
@@ -152,6 +157,10 @@ export async function inviteMember(data: InviteMemberData) {
             role: data.role,
             organizationId: data.organizationId,
         },
+    });
+
+    await captureServerEvent(session.user.id, "organization_member_invited", {
+        invited_role: data.role,
     });
 
     revalidatePath("/dashboard/settings");
