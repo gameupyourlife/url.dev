@@ -24,24 +24,10 @@ export interface UpdateMemberRoleData {
     organizationId: string;
 }
 
-export interface UserInvitation {
-    id: string;
-    email: string;
-    role: string | null;
-    status: string;
-    organizationId: string;
-    inviterId: string;
-    expiresAt: Date;
-    organization: {
-        id: string;
-        name: string;
-        slug: string;
-        logo?: string | null;
-    };
-}
+export type UserInvitation = Awaited<ReturnType<typeof auth.api.listUserInvitations>>[number];
 
 export async function createOrganization(data: CreateOrganizationData) {
-    await isAuthenticated({ behavior: "error" });
+    const session = await isAuthenticated({ behavior: "error" });
 
     const requestHeaders = await headers();
 
@@ -146,7 +132,7 @@ export async function deleteOrganization(organizationId: string) {
 }
 
 export async function inviteMember(data: InviteMemberData) {
-    await isAuthenticated({ behavior: "error" });
+    const session = await isAuthenticated({ behavior: "error" });
 
     const requestHeaders = await headers();
 
@@ -279,9 +265,7 @@ export async function listUserInvitations() {
 
     const requestHeaders = await headers();
 
-    const result = await auth.api.listUserInvitations({
+    return auth.api.listUserInvitations({
         headers: requestHeaders,
     });
-
-    return result as UserInvitation[];
 }

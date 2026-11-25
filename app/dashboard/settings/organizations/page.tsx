@@ -16,7 +16,7 @@ export default function OrganizationsPage() {
         isPending: isLoadingActiveOrganization,
         refetch: refetchActiveOrg,
     } = authClient.useActiveOrganization();
-    const { data: organizations } = authClient.useListOrganizations();
+    const { data: organizations, refetch: refetchOrganizations } = authClient.useListOrganizations();
 
     if (isLoadingActiveOrganization) {
         return (
@@ -32,6 +32,10 @@ export default function OrganizationsPage() {
                 organization={selectedOrg}
                 currentUserId={session?.user?.id || ""}
                 onRefresh={() => refetchActiveOrg()}
+                onOrganizationLeftOrDeleted={() => {
+                    refetchActiveOrg();
+                    refetchOrganizations();
+                }}
             />
         );
     }

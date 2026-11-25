@@ -1,6 +1,6 @@
 export default function FullscreenBackground({ children }: { children: React.ReactNode }) {
     return (
-        <div className="fixed inset-0 bg-gradient-to-br from-background via-muted/50 to-primary/5 -z-10">
+        <div className="bg-grain fixed inset-0 bg-gradient-to-br from-background via-muted/50 to-primary/5 -z-10">
             {/* Decorative background elements */}
             {/* <div className="absolute inset-0 bg-grid-pattern opacity-[0.01]"></div>
             <div className="absolute top-10 left-10 w-72 h-72 bg-primary/20 rounded-full blur-3xl"></div>
