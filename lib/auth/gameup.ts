@@ -1,1 +1,1 @@
-export const GAMEUP_PROVIDER_ID = "gameup";
+export const GAMEUP_PROVIDER_ID = "gameup.dev";

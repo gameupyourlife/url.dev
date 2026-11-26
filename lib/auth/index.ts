@@ -50,7 +50,7 @@ export const auth = betterAuth({
         genericOAuth({
             config: gameupClientId && gameupClientSecret ? [{
                 providerId: GAMEUP_PROVIDER_ID,
-                name: "GameUp",
+                name: "gameup.dev",
                 clientId: gameupClientId,
                 clientSecret: gameupClientSecret,
                 discoveryUrl: "https://accounts.gameup.dev/api/auth/.well-known/openid-configuration",
