@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "@tanstack/react-form";
 import * as z from "zod";
@@ -9,25 +9,26 @@ import { toast } from "sonner";
 import {
     ArrowDown,
     ArrowUp,
-    BadgeCheck,
+    FileText,
     Globe,
     Link2,
     LockIcon,
     PencilLine,
     PlusCircle,
-    Sparkles,
+    Tags,
     Trash2,
+    type LucideIcon,
 } from "lucide-react";
 
 import { upsertShortUrl } from "@/app/actions/short-urls";
 import type { ShortUrl } from "@/lib/db/types";
+import { cn } from "@/lib/utils";
 
 import { Button } from "./ui/button";
 import {
     Card,
     CardContent,
     CardDescription,
-    CardFooter,
     CardHeader,
     CardTitle,
 } from "./ui/card";
@@ -226,8 +227,10 @@ function CountryRedirectsBuilder({
     value,
     onChange,
     onBlur,
+    isInvalid,
 }: {
     value?: string | null;
+    isInvalid?: boolean;
     onChange: (value: string) => void;
     onBlur?: () => void;
 }) {
@@ -431,44 +434,36 @@ function CountryRedirectsBuilder({
     }
 
     return (
-        <div className="space-y-4">
-            <div className="flex items-center justify-between gap-3">
-                <div>
-                    <FieldLabel>Country Redirects</FieldLabel>
-                    <FieldDescription>
-                        Match visitors by country code and route them to localized destinations.
-                    </FieldDescription>
-                </div>
-                <div className="flex items-center gap-2 self-start">
-                    <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="h-8 px-2 text-xs"
-                        onClick={insertExample}
-                    >
-                        Insert Example
-                    </Button>
-                    <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="h-8"
-                        onClick={addDefaultRule}
-                    >
-                        Add Default (*)
-                    </Button>
-                    <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        className="h-8"
-                        onClick={addRule}
-                    >
-                        <PlusCircle className="mr-1 h-3.5 w-3.5" />
-                        Add Rule
-                    </Button>
-                </div>
+        <div className="flex flex-col gap-4">
+            <div className="flex flex-wrap items-center gap-2">
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 px-2 text-xs"
+                    onClick={insertExample}
+                >
+                    Insert Example
+                </Button>
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8"
+                    onClick={addDefaultRule}
+                >
+                    Add Default (*)
+                </Button>
+                <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    className="h-8"
+                    onClick={addRule}
+                >
+                    <PlusCircle data-icon="inline-start" />
+                    Add Rule
+                </Button>
             </div>
 
             <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
@@ -639,6 +634,8 @@ function CountryRedirectsBuilder({
                     variant="ghost"
                     size="sm"
                     className="h-8 px-2 text-xs"
+                    aria-expanded={showRawEditor}
+                    aria-invalid={isInvalid && !showRawEditor}
                     onClick={() => setShowRawEditor((current) => !current)}
                 >
                     {showRawEditor ? "Hide Raw JSON" : "Show Raw JSON"}
@@ -647,6 +644,8 @@ function CountryRedirectsBuilder({
                 {showRawEditor && (
                     <>
                         <Textarea
+                            aria-label="Raw metadata JSON"
+                            aria-invalid={isInvalid || !!jsonError}
                             value={rawJson}
                             onChange={(event) => updateRawJson(event.target.value)}
                             onBlur={onBlur}
@@ -668,12 +667,53 @@ function CountryRedirectsBuilder({
     );
 }
 
+const settingsAccents = {
+    link: "bg-blue-500/10 text-blue-500",
+    details: "bg-green-500/10 text-green-500",
+    access: "bg-purple-500/10 text-purple-500",
+    campaign: "bg-orange-500/10 text-orange-500",
+    redirects: "bg-primary/10 text-primary",
+};
+
+function UrlSettingsCard({
+    title,
+    description,
+    icon: Icon,
+    accent,
+    className,
+    children,
+}: {
+    title: string;
+    description: string;
+    icon: LucideIcon;
+    accent: keyof typeof settingsAccents;
+    className?: string;
+    children: ReactNode;
+}) {
+    return (
+        <Card className={cn("min-w-0", className)}>
+            <CardHeader className="flex items-start gap-3">
+                <div className={cn("grid size-10 shrink-0 place-items-center rounded-lg", settingsAccents[accent])}>
+                    <Icon aria-hidden="true" className="size-5" />
+                </div>
+                <div className="min-w-0">
+                    <CardTitle role="heading" aria-level={2}>{title}</CardTitle>
+                    <CardDescription>{description}</CardDescription>
+                </div>
+            </CardHeader>
+            <CardContent>{children}</CardContent>
+        </Card>
+    );
+}
+
 export function UrlCreationCard({
     mode = "create",
     initialData,
 }: UrlCreationCardProps) {
     const router = useRouter();
     const isEditMode = mode === "edit";
+    const formRef = useRef<HTMLFormElement>(null);
+    const shortLinkPrefix = `${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/s/`;
 
     const defaultValues = useMemo(
         () => ({
@@ -699,6 +739,13 @@ export function UrlCreationCard({
         validators: {
             // @ts-ignore zod validator adapter from current setup
             onSubmit: formSchema,
+        },
+        onSubmitInvalid: () => {
+            requestAnimationFrame(() => {
+                const firstInvalid = formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]');
+                firstInvalid?.focus({ preventScroll: true });
+                firstInvalid?.scrollIntoView({ block: "center" });
+            });
         },
         onSubmit: async ({ value }) => {
             const resolvedSlug = value.slug?.trim() || (isEditMode ? initialData?.slug : nanoid(8));
@@ -756,484 +803,497 @@ export function UrlCreationCard({
     });
 
     return (
-        <Card className="mx-auto w-full border border-border/60 bg-card">
-            <CardHeader className="space-y-4 border-b border-border/60 pb-5">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                        <CardTitle className="text-2xl tracking-tight">
-                            {isEditMode ? "Edit URL" : "Create a Short URL"}
-                        </CardTitle>
-                        <CardDescription className="mt-1 text-base">
-                            {isEditMode
-                                ? "Update your destination, targeting and campaign details."
-                                : "Build short links with optional targeting and analytics metadata."}
-                        </CardDescription>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                        <div className="rounded-full border border-border/70 bg-muted/40 px-3 py-1 text-xs text-muted-foreground">
-                            <Sparkles className="mr-1 inline h-3.5 w-3.5" />
-                            Smart defaults
-                        </div>
-                        {isEditMode ? (
-                            <div className="rounded-full border border-border/70 bg-muted/40 px-3 py-1 text-xs text-muted-foreground">
-                                <PencilLine className="mr-1 inline h-3.5 w-3.5" />
-                                Editing existing URL
-                            </div>
-                        ) : (
-                            <div className="rounded-full border border-border/70 bg-muted/40 px-3 py-1 text-xs text-muted-foreground">
-                                <BadgeCheck className="mr-1 inline h-3.5 w-3.5" />
-                                Ready to publish
-                            </div>
-                        )}
-                    </div>
+        <div className="flex flex-col gap-6">
+            <header className="flex items-start gap-4 rounded-xl bg-card p-6">
+                <div className="grid size-14 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+                    {isEditMode ? (
+                        <PencilLine aria-hidden="true" className="size-7" />
+                    ) : (
+                        <Link2 aria-hidden="true" className="size-7" />
+                    )}
                 </div>
-            </CardHeader>
+                <div className="min-w-0">
+                    <h1 className="text-2xl font-bold tracking-tight">
+                        {isEditMode ? "Edit URL" : "Create a Short URL"}
+                    </h1>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                        {isEditMode
+                            ? "Update the destination and settings for this short link."
+                            : "Add a destination to get a short link. All other settings are optional."}
+                    </p>
+                </div>
+            </header>
 
-            <CardContent className="pt-6">
-                <form
-                    id="create-url-form"
-                    autoComplete="off"
-                    className="space-y-6"
-                    onSubmit={(event) => {
-                        event.preventDefault();
-                        form.handleSubmit();
-                    }}
-                >
-                    <FieldGroup className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-                        <form.Field
-                            name="originalUrl"
-                            children={(field) => {
-                                const isInvalid =
-                                    field.state.meta.isTouched && !field.state.meta.isValid;
+            <form
+                ref={formRef}
+                autoComplete="off"
+                className="flex flex-col gap-6"
+                onSubmit={(event) => {
+                    event.preventDefault();
+                    void form.handleSubmit();
+                }}
+            >
+                <div className="grid gap-6 md:grid-cols-2">
+                    <UrlSettingsCard
+                        title="Destination & Short Link"
+                        description="Choose where the link goes and how it appears."
+                        icon={Link2}
+                        accent="link"
+                    >
+                        <FieldGroup className="gap-5">
+                            <form.Field
+                                name="originalUrl"
+                                children={(field) => {
+                                    const isInvalid =
+                                        field.state.meta.isTouched && !field.state.meta.isValid;
 
-                                return (
-                                    <Field data-invalid={isInvalid} className="lg:col-span-2">
-                                        <FieldLabel htmlFor={field.name}>
-                                            Destination URL <span className="text-destructive">*</span>
-                                        </FieldLabel>
-                                        <InputGroup>
-                                            <InputGroupAddon>
-                                                <Globe className="h-4 w-4" />
-                                            </InputGroupAddon>
-                                            <InputGroupInput
-                                                id={field.name}
-                                                name={field.name}
-                                                value={field.state.value}
-                                                onBlur={field.handleBlur}
-                                                onChange={(event) =>
-                                                    field.handleChange(event.target.value)
-                                                }
-                                                aria-invalid={isInvalid}
-                                                placeholder="https://example.com/very/long/path"
-                                                autoFocus={!isEditMode}
-                                                autoComplete="url"
-                                                type="url"
-                                            />
-                                        </InputGroup>
-                                        <FieldDescription>
-                                            The link users will land on after opening your short URL.
-                                        </FieldDescription>
-                                        {isInvalid && (
-                                            <FieldError errors={field.state.meta.errors} />
-                                        )}
-                                    </Field>
-                                );
-                            }}
-                        />
-
-                        <form.Field
-                            name="slug"
-                            children={(field) => {
-                                const isInvalid =
-                                    field.state.meta.isTouched && !field.state.meta.isValid;
-
-                                return (
-                                    <Field data-invalid={isInvalid}>
-                                        <FieldLabel htmlFor={field.name}>Custom Slug</FieldLabel>
-                                        <InputGroup>
-                                            <InputGroupAddon>
-                                                <InputGroupText className="text-muted-foreground">
-                                                    {`${process.env.NEXT_PUBLIC_BASE_URL}/s/`}
-                                                </InputGroupText>
-                                            </InputGroupAddon>
-                                            <InputGroupInput
-                                                id={field.name}
-                                                name={field.name}
-                                                value={field.state.value ?? ""}
-                                                onBlur={field.handleBlur}
-                                                onChange={(event) =>
-                                                    field.handleChange(
-                                                        event.target.value
-                                                            .toLowerCase()
-                                                            .replace(/[^a-z0-9-_]/g, ""),
-                                                    )
-                                                }
-                                                aria-invalid={isInvalid}
-                                                placeholder="my-campaign-link"
-                                                autoComplete="off"
-                                                maxLength={50}
-                                            />
-                                            <InputGroupAddon align="inline-end">
-                                                <InputGroupText className="tabular-nums text-xs">
-                                                    {(field.state.value ?? "").length}/50
-                                                </InputGroupText>
-                                            </InputGroupAddon>
-                                        </InputGroup>
-                                        <FieldDescription>
-                                            Leave blank to {isEditMode ? "keep current slug" : "auto-generate"}.
-                                        </FieldDescription>
-                                        {isInvalid && (
-                                            <FieldError errors={field.state.meta.errors} />
-                                        )}
-                                    </Field>
-                                );
-                            }}
-                        />
-
-                        <div className="rounded-xl border border-border/60 bg-muted/20 p-4 text-sm text-muted-foreground">
-                            <p className="font-medium text-foreground">Preview</p>
-                            <p className="mt-1 truncate">
-                                <Link2 className="mr-1 inline h-3.5 w-3.5" />
-                                {`${process.env.NEXT_PUBLIC_BASE_URL}/s/`}
-                                {form.getFieldValue("slug")?.trim() || (isEditMode ? initialData?.slug : "auto-id")}
-                            </p>
-                        </div>
-
-                        <form.Field
-                            name="title"
-                            children={(field) => {
-                                const isInvalid =
-                                    field.state.meta.isTouched && !field.state.meta.isValid;
-
-                                return (
-                                    <Field data-invalid={isInvalid}>
-                                        <FieldLabel htmlFor={field.name}>Title</FieldLabel>
-                                        <InputGroup>
-                                            <InputGroupInput
-                                                id={field.name}
-                                                name={field.name}
-                                                value={field.state.value ?? ""}
-                                                onBlur={field.handleBlur}
-                                                onChange={(event) =>
-                                                    field.handleChange(event.target.value)
-                                                }
-                                                aria-invalid={isInvalid}
-                                                placeholder="Q4 launch landing page"
-                                                maxLength={100}
-                                            />
-                                            <InputGroupAddon align="inline-end">
-                                                <InputGroupText className="tabular-nums text-xs">
-                                                    {(field.state.value ?? "").length}/100
-                                                </InputGroupText>
-                                            </InputGroupAddon>
-                                        </InputGroup>
-                                        {isInvalid && (
-                                            <FieldError errors={field.state.meta.errors} />
-                                        )}
-                                    </Field>
-                                );
-                            }}
-                        />
-
-                        <form.Field
-                            name="description"
-                            children={(field) => {
-                                const isInvalid =
-                                    field.state.meta.isTouched && !field.state.meta.isValid;
-
-                                return (
-                                    <Field data-invalid={isInvalid} className="lg:col-span-2">
-                                        <FieldLabel htmlFor={field.name}>Description</FieldLabel>
-                                        <InputGroup>
-                                            <InputGroupTextarea
-                                                id={field.name}
-                                                name={field.name}
-                                                value={field.state.value ?? ""}
-                                                onBlur={field.handleBlur}
-                                                onChange={(event) =>
-                                                    field.handleChange(event.target.value)
-                                                }
-                                                placeholder="Notes for your team, funnel stage, audience..."
-                                                rows={3}
-                                                className="min-h-20 resize-none"
-                                                aria-invalid={isInvalid}
-                                                maxLength={500}
-                                            />
-                                            <InputGroupAddon align="block-end">
-                                                <InputGroupText className="tabular-nums text-xs">
-                                                    {(field.state.value ?? "").length}/500
-                                                </InputGroupText>
-                                            </InputGroupAddon>
-                                        </InputGroup>
-                                        {isInvalid && (
-                                            <FieldError errors={field.state.meta.errors} />
-                                        )}
-                                    </Field>
-                                );
-                            }}
-                        />
-                    </FieldGroup>
-
-                    <FieldGroup className="space-y-3">
-                        <details className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3">
-                            <summary className="cursor-pointer select-none text-sm font-medium text-foreground/90">
-                                Access and Limits
-                            </summary>
-                            <div className="mt-4 grid grid-cols-1 gap-5 md:grid-cols-2">
-                                <form.Field
-                                    name="expiresAt"
-                                    children={(field) => {
-                                        const isInvalid =
-                                            field.state.meta.isTouched && !field.state.meta.isValid;
-
-                                        return (
-                                            <Field data-invalid={isInvalid}>
-                                                <FieldLabel htmlFor={field.name}>
-                                                    Expiration Date
-                                                </FieldLabel>
-                                                <Input
+                                    return (
+                                        <Field data-invalid={isInvalid}>
+                                            <FieldLabel htmlFor={field.name}>
+                                                Destination URL <span className="text-destructive">*</span>
+                                            </FieldLabel>
+                                            <InputGroup>
+                                                <InputGroupAddon>
+                                                    <Globe className="h-4 w-4" />
+                                                </InputGroupAddon>
+                                                <InputGroupInput
                                                     id={field.name}
                                                     name={field.name}
-                                                    type="datetime-local"
+                                                    value={field.state.value}
+                                                    onBlur={field.handleBlur}
+                                                    onChange={(event) =>
+                                                        field.handleChange(event.target.value)
+                                                    }
+                                                    aria-invalid={isInvalid}
+                                                    placeholder="https://example.com/very/long/path"
+                                                    autoFocus={!isEditMode}
+                                                    autoComplete="url"
+                                                    type="url"
+                                                />
+                                            </InputGroup>
+                                            <FieldDescription>
+                                                The link users will land on after opening your short URL.
+                                            </FieldDescription>
+                                            {isInvalid && (
+                                                <FieldError errors={field.state.meta.errors} />
+                                            )}
+                                        </Field>
+                                    );
+                                }}
+                            />
+
+                            <form.Field
+                                name="slug"
+                                children={(field) => {
+                                    const isInvalid =
+                                        field.state.meta.isTouched && !field.state.meta.isValid;
+
+                                    return (
+                                        <Field data-invalid={isInvalid}>
+                                            <FieldLabel htmlFor={field.name}>Custom Slug</FieldLabel>
+                                            <InputGroup>
+                                                <InputGroupAddon>
+                                                    <InputGroupText
+                                                        className="block max-w-20 truncate text-muted-foreground sm:max-w-40"
+                                                        title={shortLinkPrefix}
+                                                    >
+                                                        {shortLinkPrefix}
+                                                    </InputGroupText>
+                                                </InputGroupAddon>
+                                                <InputGroupInput
+                                                    id={field.name}
+                                                    name={field.name}
+                                                    value={field.state.value ?? ""}
+                                                    onBlur={field.handleBlur}
+                                                    onChange={(event) =>
+                                                        field.handleChange(
+                                                            event.target.value
+                                                                .toLowerCase()
+                                                                .replace(/[^a-z0-9-_]/g, ""),
+                                                        )
+                                                    }
+                                                    aria-invalid={isInvalid}
+                                                    placeholder="my-campaign-link"
+                                                    autoComplete="off"
+                                                    maxLength={50}
+                                                />
+                                                <InputGroupAddon align="inline-end">
+                                                    <InputGroupText className="tabular-nums text-xs">
+                                                        {(field.state.value ?? "").length}/50
+                                                    </InputGroupText>
+                                                </InputGroupAddon>
+                                            </InputGroup>
+                                            <FieldDescription>
+                                                Leave blank to {isEditMode ? "keep current slug" : "auto-generate"}.
+                                            </FieldDescription>
+                                            {isInvalid && (
+                                                <FieldError errors={field.state.meta.errors} />
+                                            )}
+                                        </Field>
+                                    );
+                                }}
+                            />
+
+                            <form.Subscribe selector={(state) => state.values.slug}>
+                                {(slug) => (
+                                    <div className="flex min-w-0 flex-col gap-1 rounded-lg bg-muted px-3 py-2">
+                                        <p className="text-xs font-medium text-muted-foreground">Short link preview</p>
+                                        <code className="break-all text-sm">
+                                            {shortLinkPrefix}{slug?.trim() || (isEditMode ? initialData?.slug : "auto-id")}
+                                        </code>
+                                    </div>
+                                )}
+                            </form.Subscribe>
+                        </FieldGroup>
+                    </UrlSettingsCard>
+
+                    <UrlSettingsCard
+                        title="Title & Description"
+                        description="Add optional notes to identify this link."
+                        icon={FileText}
+                        accent="details"
+                    >
+                        <FieldGroup className="gap-5">
+                            <form.Field
+                                name="title"
+                                children={(field) => {
+                                    const isInvalid =
+                                        field.state.meta.isTouched && !field.state.meta.isValid;
+
+                                    return (
+                                        <Field data-invalid={isInvalid}>
+                                            <FieldLabel htmlFor={field.name}>Title</FieldLabel>
+                                            <InputGroup>
+                                                <InputGroupInput
+                                                    id={field.name}
+                                                    name={field.name}
+                                                    value={field.state.value ?? ""}
+                                                    onBlur={field.handleBlur}
+                                                    onChange={(event) =>
+                                                        field.handleChange(event.target.value)
+                                                    }
+                                                    aria-invalid={isInvalid}
+                                                    placeholder="Q4 launch landing page"
+                                                    maxLength={100}
+                                                />
+                                                <InputGroupAddon align="inline-end">
+                                                    <InputGroupText className="tabular-nums text-xs">
+                                                        {(field.state.value ?? "").length}/100
+                                                    </InputGroupText>
+                                                </InputGroupAddon>
+                                            </InputGroup>
+                                            {isInvalid && (
+                                                <FieldError errors={field.state.meta.errors} />
+                                            )}
+                                        </Field>
+                                    );
+                                }}
+                            />
+
+                            <form.Field
+                                name="description"
+                                children={(field) => {
+                                    const isInvalid =
+                                        field.state.meta.isTouched && !field.state.meta.isValid;
+
+                                    return (
+                                        <Field data-invalid={isInvalid}>
+                                            <FieldLabel htmlFor={field.name}>Description</FieldLabel>
+                                            <InputGroup>
+                                                <InputGroupTextarea
+                                                    id={field.name}
+                                                    name={field.name}
+                                                    value={field.state.value ?? ""}
+                                                    onBlur={field.handleBlur}
+                                                    onChange={(event) =>
+                                                        field.handleChange(event.target.value)
+                                                    }
+                                                    placeholder="Notes for your team, funnel stage, audience..."
+                                                    rows={3}
+                                                    className="min-h-20 resize-none"
+                                                    aria-invalid={isInvalid}
+                                                    maxLength={500}
+                                                />
+                                                <InputGroupAddon align="block-end">
+                                                    <InputGroupText className="tabular-nums text-xs">
+                                                        {(field.state.value ?? "").length}/500
+                                                    </InputGroupText>
+                                                </InputGroupAddon>
+                                            </InputGroup>
+                                            {isInvalid && (
+                                                <FieldError errors={field.state.meta.errors} />
+                                            )}
+                                        </Field>
+                                    );
+                                }}
+                            />
+                        </FieldGroup>
+                    </UrlSettingsCard>
+
+                    <UrlSettingsCard
+                        title="Access & Limits"
+                        description="Optionally restrict who can use the link and when."
+                        icon={LockIcon}
+                        accent="access"
+                    >
+                        <FieldGroup className="grid gap-5 lg:grid-cols-2">
+                            <form.Field
+                                name="expiresAt"
+                                children={(field) => {
+                                    const isInvalid =
+                                        field.state.meta.isTouched && !field.state.meta.isValid;
+
+                                    return (
+                                        <Field data-invalid={isInvalid}>
+                                            <FieldLabel htmlFor={field.name}>
+                                                Expiration Date
+                                            </FieldLabel>
+                                            <Input
+                                                id={field.name}
+                                                name={field.name}
+                                                type="datetime-local"
+                                                value={field.state.value || ""}
+                                                onBlur={field.handleBlur}
+                                                onChange={(event) =>
+                                                    field.handleChange(event.target.value)
+                                                }
+                                                aria-invalid={isInvalid}
+                                            />
+                                            <FieldDescription>
+                                                The short URL will stop redirecting after this moment.
+                                            </FieldDescription>
+                                            {isInvalid && (
+                                                <FieldError errors={field.state.meta.errors} />
+                                            )}
+                                        </Field>
+                                    );
+                                }}
+                            />
+
+                            <form.Field
+                                name="maxClicks"
+                                children={(field) => {
+                                    const isInvalid =
+                                        field.state.meta.isTouched && !field.state.meta.isValid;
+
+                                    return (
+                                        <Field data-invalid={isInvalid}>
+                                            <FieldLabel htmlFor={field.name}>Max Clicks</FieldLabel>
+                                            <Input
+                                                id={field.name}
+                                                name={field.name}
+                                                type="number"
+                                                min="1"
+                                                value={field.state.value ?? ""}
+                                                onBlur={field.handleBlur}
+                                                onChange={(event) => {
+                                                    const next = event.target.value.trim();
+                                                    field.handleChange(
+                                                        next ? Number(next) : undefined,
+                                                    );
+                                                }}
+                                                aria-invalid={isInvalid}
+                                                placeholder="100"
+                                            />
+                                            <FieldDescription>
+                                                Limit how many times this link can be used.
+                                            </FieldDescription>
+                                            {isInvalid && (
+                                                <FieldError errors={field.state.meta.errors} />
+                                            )}
+                                        </Field>
+                                    );
+                                }}
+                            />
+
+                            <form.Field
+                                name="password"
+                                children={(field) => {
+                                    const isInvalid =
+                                        field.state.meta.isTouched && !field.state.meta.isValid;
+
+                                    return (
+                                        <Field data-invalid={isInvalid} className="lg:col-span-2">
+                                            <FieldLabel htmlFor={field.name}>
+                                                Password Protection
+                                            </FieldLabel>
+                                            <InputGroup>
+                                                <InputGroupAddon>
+                                                    <LockIcon className="h-4 w-4" />
+                                                </InputGroupAddon>
+                                                <InputGroupInput
+                                                    id={field.name}
+                                                    name={field.name}
+                                                    type="password"
                                                     value={field.state.value || ""}
                                                     onBlur={field.handleBlur}
                                                     onChange={(event) =>
                                                         field.handleChange(event.target.value)
                                                     }
                                                     aria-invalid={isInvalid}
+                                                    placeholder="Set password (6+ chars)"
+                                                    autoComplete="new-password"
                                                 />
-                                                <FieldDescription>
-                                                    The short URL will stop redirecting after this moment.
-                                                </FieldDescription>
-                                                {isInvalid && (
-                                                    <FieldError errors={field.state.meta.errors} />
-                                                )}
-                                            </Field>
-                                        );
-                                    }}
-                                />
-
-                                <form.Field
-                                    name="maxClicks"
-                                    children={(field) => {
-                                        const isInvalid =
-                                            field.state.meta.isTouched && !field.state.meta.isValid;
-
-                                        return (
-                                            <Field data-invalid={isInvalid}>
-                                                <FieldLabel htmlFor={field.name}>Max Clicks</FieldLabel>
-                                                <Input
-                                                    id={field.name}
-                                                    name={field.name}
-                                                    type="number"
-                                                    min="1"
-                                                    value={field.state.value ?? ""}
-                                                    onBlur={field.handleBlur}
-                                                    onChange={(event) => {
-                                                        const next = event.target.value.trim();
-                                                        field.handleChange(
-                                                            next ? Number(next) : undefined,
-                                                        );
-                                                    }}
-                                                    aria-invalid={isInvalid}
-                                                    placeholder="100"
-                                                />
-                                                <FieldDescription>
-                                                    Limit how many times this link can be used.
-                                                </FieldDescription>
-                                                {isInvalid && (
-                                                    <FieldError errors={field.state.meta.errors} />
-                                                )}
-                                            </Field>
-                                        );
-                                    }}
-                                />
-
-                                <form.Field
-                                    name="password"
-                                    children={(field) => {
-                                        const isInvalid =
-                                            field.state.meta.isTouched && !field.state.meta.isValid;
-
-                                        return (
-                                            <Field data-invalid={isInvalid} className="md:col-span-2">
-                                                <FieldLabel htmlFor={field.name}>
-                                                    Password Protection
-                                                </FieldLabel>
-                                                <InputGroup>
-                                                    <InputGroupAddon>
-                                                        <LockIcon className="h-4 w-4" />
-                                                    </InputGroupAddon>
-                                                    <InputGroupInput
-                                                        id={field.name}
-                                                        name={field.name}
-                                                        type="password"
-                                                        value={field.state.value || ""}
-                                                        onBlur={field.handleBlur}
-                                                        onChange={(event) =>
-                                                            field.handleChange(event.target.value)
-                                                        }
-                                                        aria-invalid={isInvalid}
-                                                        placeholder="Set password (6+ chars)"
-                                                        autoComplete="new-password"
-                                                    />
-                                                </InputGroup>
-                                                {isInvalid && (
-                                                    <FieldError errors={field.state.meta.errors} />
-                                                )}
-                                            </Field>
-                                        );
-                                    }}
-                                />
-                            </div>
-                        </details>
-
-                        <details className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3">
-                            <summary className="cursor-pointer select-none text-sm font-medium text-foreground/90">
-                                UTM Tracking
-                            </summary>
-                            <div className="mt-4 grid grid-cols-1 gap-5 md:grid-cols-2">
-                                <form.Field
-                                    name="utmSource"
-                                    children={(field) => (
-                                        <Field>
-                                            <FieldLabel htmlFor={field.name}>UTM Source</FieldLabel>
-                                            <Input
-                                                id={field.name}
-                                                name={field.name}
-                                                value={field.state.value || ""}
-                                                onBlur={field.handleBlur}
-                                                onChange={(event) => field.handleChange(event.target.value)}
-                                                placeholder="google"
-                                            />
+                                            </InputGroup>
+                                            {isInvalid && (
+                                                <FieldError errors={field.state.meta.errors} />
+                                            )}
                                         </Field>
-                                    )}
-                                />
-                                <form.Field
-                                    name="utmMedium"
-                                    children={(field) => (
-                                        <Field>
-                                            <FieldLabel htmlFor={field.name}>UTM Medium</FieldLabel>
-                                            <Input
-                                                id={field.name}
-                                                name={field.name}
-                                                value={field.state.value || ""}
-                                                onBlur={field.handleBlur}
-                                                onChange={(event) => field.handleChange(event.target.value)}
-                                                placeholder="cpc"
-                                            />
-                                        </Field>
-                                    )}
-                                />
-                                <form.Field
-                                    name="utmCampaign"
-                                    children={(field) => (
-                                        <Field>
-                                            <FieldLabel htmlFor={field.name}>UTM Campaign</FieldLabel>
-                                            <Input
-                                                id={field.name}
-                                                name={field.name}
-                                                value={field.state.value || ""}
-                                                onBlur={field.handleBlur}
-                                                onChange={(event) => field.handleChange(event.target.value)}
-                                                placeholder="spring-launch"
-                                            />
-                                        </Field>
-                                    )}
-                                />
-                                <form.Field
-                                    name="utmTerm"
-                                    children={(field) => (
-                                        <Field>
-                                            <FieldLabel htmlFor={field.name}>UTM Term</FieldLabel>
-                                            <Input
-                                                id={field.name}
-                                                name={field.name}
-                                                value={field.state.value || ""}
-                                                onBlur={field.handleBlur}
-                                                onChange={(event) => field.handleChange(event.target.value)}
-                                                placeholder="running-shoes"
-                                            />
-                                        </Field>
-                                    )}
-                                />
-                                <form.Field
-                                    name="utmContent"
-                                    children={(field) => (
-                                        <Field className="md:col-span-2">
-                                            <FieldLabel htmlFor={field.name}>UTM Content</FieldLabel>
-                                            <Input
-                                                id={field.name}
-                                                name={field.name}
-                                                value={field.state.value || ""}
-                                                onBlur={field.handleBlur}
-                                                onChange={(event) => field.handleChange(event.target.value)}
-                                                placeholder="cta-button-a"
-                                            />
-                                        </Field>
-                                    )}
-                                />
-                            </div>
-                        </details>
+                                    );
+                                }}
+                            />
+                        </FieldGroup>
+                    </UrlSettingsCard>
 
-                        <details className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3">
-                            <summary className="cursor-pointer select-none text-sm font-medium text-foreground/90">
-                                Country Redirects and Metadata
-                            </summary>
-                            <div className="mt-4">
-                                <form.Field
-                                    name="metadata"
-                                    children={(field) => {
-                                        const isInvalid =
-                                            field.state.meta.isTouched && !field.state.meta.isValid;
-
-                                        return (
-                                            <Field data-invalid={isInvalid}>
-                                                <CountryRedirectsBuilder
-                                                    value={field.state.value}
-                                                    onChange={field.handleChange}
-                                                    onBlur={field.handleBlur}
-                                                />
-                                                {isInvalid && (
-                                                    <FieldError errors={field.state.meta.errors} />
-                                                )}
-                                            </Field>
-                                        );
-                                    }}
-                                />
-                            </div>
-                        </details>
-                    </FieldGroup>
-                </form>
-            </CardContent>
-
-            <CardFooter className="flex flex-col items-stretch justify-between gap-3 border-t border-border/60 pt-5 sm:flex-row sm:items-center">
-                <div className="text-sm text-muted-foreground">
-                    {isEditMode
-                        ? "Changes are applied to your existing short URL."
-                        : "Your link will be available instantly after creation."}
-                </div>
-                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-                    <Button
-                        type="button"
-                        variant="outline"
-                        className="w-full sm:w-auto"
-                        onClick={() => {
-                            if (isEditMode && initialData?.id) {
-                                router.push(`/dashboard/urls/${initialData.id}`);
-                                return;
-                            }
-                            form.reset();
-                        }}
+                    <UrlSettingsCard
+                        title="Campaign Tracking (UTM)"
+                        description="Add optional tags to attribute visits to a campaign."
+                        icon={Tags}
+                        accent="campaign"
                     >
-                        {isEditMode ? "Cancel" : "Reset"}
-                    </Button>
-                    <Button type="submit" form="create-url-form" className="w-full sm:w-auto">
-                        {isEditMode ? "Save Changes" : "Create Short URL"}
-                    </Button>
+                        <FieldGroup className="grid gap-5 lg:grid-cols-2">
+                            <form.Field
+                                name="utmSource"
+                                children={(field) => (
+                                    <Field>
+                                        <FieldLabel htmlFor={field.name}>UTM Source</FieldLabel>
+                                        <Input
+                                            id={field.name}
+                                            name={field.name}
+                                            value={field.state.value || ""}
+                                            onBlur={field.handleBlur}
+                                            onChange={(event) => field.handleChange(event.target.value)}
+                                            placeholder="google"
+                                        />
+                                    </Field>
+                                )}
+                            />
+                            <form.Field
+                                name="utmMedium"
+                                children={(field) => (
+                                    <Field>
+                                        <FieldLabel htmlFor={field.name}>UTM Medium</FieldLabel>
+                                        <Input
+                                            id={field.name}
+                                            name={field.name}
+                                            value={field.state.value || ""}
+                                            onBlur={field.handleBlur}
+                                            onChange={(event) => field.handleChange(event.target.value)}
+                                            placeholder="cpc"
+                                        />
+                                    </Field>
+                                )}
+                            />
+                            <form.Field
+                                name="utmCampaign"
+                                children={(field) => (
+                                    <Field>
+                                        <FieldLabel htmlFor={field.name}>UTM Campaign</FieldLabel>
+                                        <Input
+                                            id={field.name}
+                                            name={field.name}
+                                            value={field.state.value || ""}
+                                            onBlur={field.handleBlur}
+                                            onChange={(event) => field.handleChange(event.target.value)}
+                                            placeholder="spring-launch"
+                                        />
+                                    </Field>
+                                )}
+                            />
+                            <form.Field
+                                name="utmTerm"
+                                children={(field) => (
+                                    <Field>
+                                        <FieldLabel htmlFor={field.name}>UTM Term</FieldLabel>
+                                        <Input
+                                            id={field.name}
+                                            name={field.name}
+                                            value={field.state.value || ""}
+                                            onBlur={field.handleBlur}
+                                            onChange={(event) => field.handleChange(event.target.value)}
+                                            placeholder="running-shoes"
+                                        />
+                                    </Field>
+                                )}
+                            />
+                            <form.Field
+                                name="utmContent"
+                                children={(field) => (
+                                    <Field className="lg:col-span-2">
+                                        <FieldLabel htmlFor={field.name}>UTM Content</FieldLabel>
+                                        <Input
+                                            id={field.name}
+                                            name={field.name}
+                                            value={field.state.value || ""}
+                                            onBlur={field.handleBlur}
+                                            onChange={(event) => field.handleChange(event.target.value)}
+                                            placeholder="cta-button-a"
+                                        />
+                                    </Field>
+                                )}
+                            />
+                        </FieldGroup>
+                    </UrlSettingsCard>
+
+                    <UrlSettingsCard
+                        title="Country Redirects & Metadata"
+                        description="Optionally send visitors to different destinations based on their country."
+                        icon={Globe}
+                        accent="redirects"
+                        className="md:col-span-2"
+                    >
+                        <FieldGroup className="gap-5">
+                            <form.Field
+                                name="metadata"
+                                children={(field) => {
+                                    const isInvalid =
+                                        field.state.meta.isTouched && !field.state.meta.isValid;
+
+                                    return (
+                                        <Field data-invalid={isInvalid}>
+                                            <CountryRedirectsBuilder
+                                                value={field.state.value}
+                                                onChange={field.handleChange}
+                                                onBlur={field.handleBlur}
+                                                isInvalid={isInvalid}
+                                            />
+                                            {isInvalid && (
+                                                <FieldError errors={field.state.meta.errors} />
+                                            )}
+                                        </Field>
+                                    );
+                                }}
+                            />
+                        </FieldGroup>
+                    </UrlSettingsCard>
                 </div>
-            </CardFooter>
-        </Card>
+
+                <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-end gap-2 rounded-xl border bg-card p-3 shadow-sm sm:justify-between sm:px-6">
+                    <p className="hidden text-sm text-muted-foreground sm:block">
+                        {isEditMode
+                            ? "Changes are applied to your existing short URL."
+                            : "Your link will be available instantly after creation."}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                                if (isEditMode && initialData?.id) {
+                                    router.push(`/dashboard/urls/${initialData.id}`);
+                                    return;
+                                }
+                                form.reset();
+                            }}
+                        >
+                            {isEditMode ? "Cancel" : "Reset"}
+                        </Button>
+                        <Button type="submit">
+                            {isEditMode ? "Save Changes" : "Create Short URL"}
+                        </Button>
+                    </div>
+                </div>
+            </form>
+        </div>
     );
 }
